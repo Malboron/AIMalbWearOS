@@ -1,47 +1,41 @@
-# Wear OS AI Assistant - Speed Optimization & Phone Sync (v43)
+# Implementation Plan - Reliable Data Sync & Resilient Connectivity (v45)
 
-This plan focuses on extreme performance tuning, removing hardcoded secrets, and implementing a dual-input system (Watch + Phone) for the API key with instant verification.
+This plan fixes the synchronization issue between the phone and watch by unifying identities, splits the companion UI into separate Verify/Sync actions, and implements a resilient DNS strategy using providers currently functional in restricted regions.
 
 ## Proposed Changes
 
-### 1. Speed Optimization (Extreme Response)
+### 1. Visual Identity & Connectivity (Phone)
 
-#### [MODIFY] [AiRepository.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/AiRepository.kt)
-- **Remove Delays**: Delete all artificial `delay()` calls after search or status updates.
-- **Verification API**: Add `verifyApiKey(key: String): Result<Boolean>` to check if the key is valid by fetching the models list from Groq.
+#### [MODIFY] [phonecompanionmodule/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/build.gradle.kts)
+- **Mandatory ID Sync**: Change `applicationId` to **`com.malbandco.aimalb`**. This is required for the Data Layer API to link the phone and watch.
 
-#### [MODIFY] [TtsManager.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/TtsManager.kt)
-- **Controlled Pacing**: Rewrite `enqueueAll` to use a step-by-step approach.
-- **200ms Gap**: Instead of enqueuing all at once, wait for `onDone`, then use a `Handler` or `Coroutine` to wait exactly **200ms** before speaking the next phrase.
-- **Latency**: Reduce initial safety buffer to **100ms**.
+#### [MODIFY] [CompanionViewModel.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/java/com/malbandco/phonecompanionmodule/presentation/CompanionViewModel.kt)
+- **Resilient DoH Strategy**: Replace Cloudflare (1.1.1.1) with providers confirmed working in 2026:
+    - Primary: **Quad9** (`dns.quad9.net`)
+    - Secondary: **Comss.one** (`dns.comss.one`)
+- **DoH Chain**: Implement a multi-stage DNS resolver that tries Quad9, then Comss.one, and finally falls back to the system DNS.
 
-### 2. API Key Infrastructure (Watch & Phone)
+### 2. Reliable Background Sync (Watch)
 
-#### [MODIFY] [PreferencesManager.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/local/PreferencesManager.kt)
-- **Zero Defaults**: Remove hardcoded API key. Default to empty.
+#### [NEW] [KeySyncService.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/local/KeySyncService.kt)
+- Create a `WearableListenerService` on the watch.
+- This service listens for the `/groq_key` data event and saves it to `PreferencesManager` even if the main AI app is closed.
 
-#### [MODIFY] [MainViewModel.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainViewModel.kt)
-- **Phone Data Sync**: Implement `DataClient.OnDataChangedListener`. When the phone sends a `GROQ_KEY` through the Android Data Layer, automatically update the local settings.
-- **Verification State**: Add `keyVerificationStatus` flow to show "Validating...", "Success", or "Error" on the UI.
+#### [MODIFY] [app/src/main/AndroidManifest.xml](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/AndroidManifest.xml)
+- Register the `KeySyncService` with the `com.google.android.gms.wearable.BIND_LISTENER` intent filter.
 
-### 3. UI Refinement (Dual Input)
+### 3. Companion UI Refinement
 
-#### [MODIFY] [MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainActivity.kt)
-- **Settings Screen**:
-    - Keep the **Manual Input** field for the API Key.
-    - Add a **"Verify Key"** button below the input.
-    - Display status: 🟢 (Working) or 🔴 (Invalid/Expired).
-
-### 4. Companion App Technical Specification
-- I will provide a prompt for a separate project to create a phone app that:
-    1. Connects to the watch via `Wearable.getDataClient`.
-    2. Has a field to enter and verify the Groq Key.
-    3. Syncs the key to the watch automatically.
+#### [MODIFY] [MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/java/com/malbandco/phonecompanionmodule/MainActivity.kt)
+- **Split Actions**:
+    - **Verify Key**: Uses the new resilient DNS to check the key. Shows status 🟢/🔴.
+    - **Sync to Watch**: Manually pushes the key to the watch regardless of verification success.
+- **Improved DoH Toggle**: Allow users to choose between Quad9 and Comss.one or disable it.
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Response Speed**: Verify AI starts speaking almost instantly after processing.
-2.  **Speech Flow**: Listen to the 200ms pauses between phrases—it should sound fast and rhythmic.
-3.  **Manual Check**: Enter a key on the watch and tap "Verify".
-4.  **Sync Check**: (Post-companion app) Verify entering key on phone updates the watch UI instantly.
+1.  **Identity Check**: Confirm both apps now use `com.malbandco.aimalb`.
+2.  **DNS Resilience**: Enter key on phone, tap "Verify". Ensure host resolution succeeds using Quad9/Comss.one.
+3.  **Background Sync**: Close AI app on watch. Tap "Sync" on phone. Open AI app on watch and confirm the key is updated.
+4.  **Independent Buttons**: Confirm you can tap "Sync" even if "Verify" returned an error.

@@ -1,16 +1,11 @@
 package com.malbandco.aimalb.presentation
 
 import android.content.Context
-import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.android.gms.wearable.DataClient
-import com.google.android.gms.wearable.DataEventBuffer
-import com.google.android.gms.wearable.DataMapItem
-import com.google.android.gms.wearable.Wearable
 import com.malbandco.aimalb.data.AiRepository
 import com.malbandco.aimalb.data.local.PreferencesManager
 import com.malbandco.aimalb.data.remote.GroqApi
@@ -35,7 +30,7 @@ sealed class VerificationStatus {
     data class Error(val message: String) : VerificationStatus()
 }
 
-class MainViewModel : ViewModel(), DataClient.OnDataChangedListener {
+class MainViewModel : ViewModel() {
 
     private val _appState = mutableStateOf(AppState.IDLE)
     val appState: State<AppState> = _appState
@@ -82,8 +77,6 @@ class MainViewModel : ViewModel(), DataClient.OnDataChangedListener {
     fun init(context: Context) {
         if (preferencesManager == null) {
             preferencesManager = PreferencesManager(context)
-            // Register for Phone Sync
-            Wearable.getDataClient(context).addListener(this)
         }
         
         if (ttsManager == null) {
@@ -149,18 +142,6 @@ class MainViewModel : ViewModel(), DataClient.OnDataChangedListener {
                 groqApi = groqRetrofit.create(GroqApi::class.java),
                 searxngApi = searxngRetrofit.create(SearxngApi::class.java)
             )
-        }
-    }
-
-    override fun onDataChanged(dataEvents: DataEventBuffer) {
-        dataEvents.forEach { event ->
-            if (event.dataItem.uri.path == "/groq_key") {
-                val dataMap = DataMapItem.fromDataItem(event.dataItem).dataMap
-                val key = dataMap.getString("key", "")
-                if (key.isNotEmpty()) {
-                    setApiKey(key)
-                }
-            }
         }
     }
 
@@ -277,10 +258,5 @@ class MainViewModel : ViewModel(), DataClient.OnDataChangedListener {
     override fun onCleared() {
         super.onCleared()
         ttsManager?.release()
-        preferencesManager?.let {
-            // Unregister to avoid memory leaks
-            // Note: We need context to get DataClient. 
-            // In a real app we might use a lifecycle observer or passing context to unregister.
-        }
     }
 }

@@ -24,4 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "AIMalb"
 include(":app")
- 
+include(":phonecompanionmodule")
