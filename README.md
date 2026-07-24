@@ -44,10 +44,6 @@
 
 ---
 
-## 📦 Версии
-*   **Watch App**: v1.0.7-beta (Build 50)
-*   **Phone App**: v1.0.6-beta (Build 7)
-
 ## Технологии
 
 * Kotlin
