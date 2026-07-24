@@ -50,6 +50,14 @@ class PreferencesManager(context: Context) {
         get() = prefs.getString("system_prompt", DEFAULT_PROMPT) ?: DEFAULT_PROMPT
         set(value) = prefs.edit().putString("system_prompt", value).apply()
 
+    var autoListenOnOpen: Boolean
+        get() = prefs.getBoolean("auto_listen", false)
+        set(value) = prefs.edit().putBoolean("auto_listen", value).apply()
+
+    var longPressShortcutEnabled: Boolean
+        get() = prefs.getBoolean("long_press_shortcut", false)
+        set(value) = prefs.edit().putBoolean("long_press_shortcut", value).apply()
+
     fun resetPrompt() {
         systemPrompt = DEFAULT_PROMPT
     }

@@ -105,6 +105,10 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     fun getUseDoH() = prefs.useDoH
     fun setUseDoH(v: Boolean) { prefs.useDoH = v }
 
+    fun getSystemPrompt() = prefs.systemPrompt
+    fun setSystemPrompt(v: String) { prefs.systemPrompt = v }
+    fun resetSystemPrompt() { prefs.resetPrompt() }
+
     fun verifyKey(key: String) {
         if (key.isBlank()) {
             _syncStatus.value = SyncStatus.Error("Key is empty")
@@ -134,11 +138,23 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val dataClient = Wearable.getDataClient(getApplication<Application>())
+                val messageClient = Wearable.getMessageClient(getApplication<Application>())
+                val nodeClient = Wearable.getNodeClient(getApplication<Application>())
+
+                // 1. Data Layer Sync (Persistent)
                 val putDataReq = PutDataMapRequest.create("/groq_key").apply {
                     dataMap.putString("key", key)
+                    dataMap.putLong("timestamp", System.currentTimeMillis()) // Force change trigger
                 }.asPutDataRequest()
                 putDataReq.setUrgent()
                 dataClient.putDataItem(putDataReq).await()
+
+                // 2. Message API Sync (Instant for active app)
+                val nodes = nodeClient.connectedNodes.await()
+                nodes.forEach { node ->
+                    messageClient.sendMessage(node.id, "/sync_key", key.toByteArray()).await()
+                }
+                
                 _syncStatus.value = SyncStatus.Success
             } catch (e: Exception) {
                 Log.e("CompanionVM", "Sync failed", e)

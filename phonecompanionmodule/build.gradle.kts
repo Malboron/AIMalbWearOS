@@ -3,6 +3,10 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+base {
+    archivesName.set("AIMalbCompanion1.0.6-beta")
+}
+
 android {
     namespace = "com.malbandco.phonecompanionmodule"
     compileSdk = 37
@@ -11,8 +15,8 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3-beta"
+        versionCode = 7
+        versionName = "1.0.6-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

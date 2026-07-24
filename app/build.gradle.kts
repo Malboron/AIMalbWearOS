@@ -3,21 +3,26 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+base {
+    archivesName.set("AIMalb1.0.7-beta")
+}
+
 android {
     namespace = "com.malbandco.aimalb"
-    compileSdk {
-        version = release(36) {
-            minorApiLevel = 1
-        }
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.malbandco.aimalb"
         minSdk = 30
         targetSdk = 36
-        versionCode = 47
-        versionName = "1.0.4-beta"
+        versionCode = 50
+        versionName = "1.0.7-beta"
 
+    }
+
+    // Modern way to rename APK/AAB base
+    base {
+        archivesName.set("AIMalb${android.defaultConfig.versionName}")
     }
 
     signingConfigs {

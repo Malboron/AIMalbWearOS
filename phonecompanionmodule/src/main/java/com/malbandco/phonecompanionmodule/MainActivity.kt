@@ -1,12 +1,18 @@
 package com.malbandco.phonecompanionmodule
 
 import android.os.Bundle
+import android.content.Intent
+import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,7 +21,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,6 +60,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
     var apiKey by remember { mutableStateOf("") }
     var keyVisible by remember { mutableStateOf(false) }
     var showNetworkSettings by remember { mutableStateOf(false) }
+    var showPromptEditor by remember { mutableStateOf(false) }
     val syncStatus = viewModel.syncStatus.value
 
     val neonCyan = Color(0xFF00E5FF)
@@ -107,7 +116,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Split Actions as requested in v45
+        // Split Actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = { viewModel.verifyKey(apiKey) },
@@ -129,6 +138,43 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
         }
 
         Spacer(modifier = Modifier.height(24.dp))
+
+        // System Prompt Toggle
+        Button(
+            onClick = { showPromptEditor = !showPromptEditor },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.filledTonalButtonColors()
+        ) {
+            Text("Edit System Prompt", color = Color.White)
+        }
+
+        AnimatedVisibility(visible = showPromptEditor) {
+            var localPrompt by remember { mutableStateOf(viewModel.getSystemPrompt()) }
+            Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                SimpleInputField(
+                    value = localPrompt, 
+                    onValueChange = { localPrompt = it }, 
+                    placeholder = "Prompt Text", 
+                    singleLine = false
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    TextButton(onClick = { 
+                        viewModel.resetSystemPrompt()
+                        localPrompt = viewModel.getSystemPrompt()
+                    }) {
+                        Text("Reset", color = Color.Gray)
+                    }
+                    TextButton(onClick = { 
+                        viewModel.setSystemPrompt(localPrompt)
+                        showPromptEditor = false
+                    }) {
+                        Text("Save", color = neonCyan)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Network Settings Toggle
         TextButton(onClick = { showNetworkSettings = !showNetworkSettings }) {
@@ -182,7 +228,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("github.com/Malboron/AIMalbWearOS", color = Color.Gray, fontSize = 10.sp)
-                    Text("v1.0.3-beta (Build 4)", color = Color.DarkGray, fontSize = 10.sp)
+                    Text("v1.0.6-beta (Build 7)", color = Color.DarkGray, fontSize = 10.sp)
                 }
             }
             SyncStatus.Verifying -> {
@@ -207,5 +253,23 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SimpleInputField(value: String, onValueChange: (String) -> Unit, placeholder: String, singleLine: Boolean = true) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(placeholder, style = TextStyle(fontSize = 10.sp, color = Color.Gray))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+            cursorBrush = SolidColor(Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.DarkGray, shape = MaterialTheme.shapes.small)
+                .padding(8.dp)
+        )
     }
 }

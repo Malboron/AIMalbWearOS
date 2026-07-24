@@ -56,6 +56,9 @@ class MainViewModel : ViewModel() {
     private val _verificationStatus = mutableStateOf<VerificationStatus>(VerificationStatus.Idle)
     val verificationStatus: State<VerificationStatus> = _verificationStatus
 
+    private val _shouldTriggerVoice = mutableStateOf(false)
+    val shouldTriggerVoice: State<Boolean> = _shouldTriggerVoice
+
     private var allPhrases: List<String> = emptyList()
     private var ttsManager: TtsManager? = null
     private var screenStayAwakeJob: Job? = null
@@ -65,6 +68,7 @@ class MainViewModel : ViewModel() {
         get() = _repository ?: throw IllegalStateException("Repository not initialized. Call init(context) first.")
 
     private var preferencesManager: PreferencesManager? = null
+    private var hasAutoListened = false
 
     val availableModels = listOf(
         "openai/gpt-oss-120b",
@@ -154,6 +158,27 @@ class MainViewModel : ViewModel() {
     fun getSystemPrompt() = preferencesManager?.systemPrompt ?: PreferencesManager.DEFAULT_PROMPT
     fun setSystemPrompt(prompt: String) { preferencesManager?.systemPrompt = prompt }
     fun resetSystemPrompt() { preferencesManager?.resetPrompt() }
+
+    fun getAutoListen() = preferencesManager?.autoListenOnOpen ?: false
+    fun setAutoListen(value: Boolean) { preferencesManager?.autoListenOnOpen = value }
+
+    fun getLongPressEnabled() = preferencesManager?.longPressShortcutEnabled ?: false
+    fun setLongPressEnabled(value: Boolean) { preferencesManager?.longPressShortcutEnabled = value }
+
+    fun triggerAutoListenIfNeeded() {
+        if (!hasAutoListened && getAutoListen()) {
+            hasAutoListened = true
+            _shouldTriggerVoice.value = true
+        }
+    }
+
+    fun triggerVoiceManually() {
+        _shouldTriggerVoice.value = true
+    }
+
+    fun onVoiceTriggerConsumed() {
+        _shouldTriggerVoice.value = false
+    }
 
     fun verifyKey() {
         val key = getApiKey()

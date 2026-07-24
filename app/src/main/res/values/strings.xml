@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">AIMalb</string>
+    <string name="accessibility_service_desc">Перехват зажатия кнопки для запуска AI-ассистента</string>
     <string name="hello_world">Hello, %1$s!</string>
 </resources>

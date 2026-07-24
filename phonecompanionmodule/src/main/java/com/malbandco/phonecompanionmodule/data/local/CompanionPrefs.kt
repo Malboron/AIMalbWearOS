@@ -24,4 +24,16 @@ class CompanionPrefs(context: Context) {
     var useDoH: Boolean
         get() = prefs.getBoolean("use_doh", true)
         set(value) = prefs.edit().putBoolean("use_doh", value).apply()
+
+    var systemPrompt: String
+        get() = prefs.getString("system_prompt", DEFAULT_PROMPT) ?: DEFAULT_PROMPT
+        set(value) = prefs.edit().putString("system_prompt", value).apply()
+
+    fun resetPrompt() {
+        systemPrompt = DEFAULT_PROMPT
+    }
+
+    companion object {
+        const val DEFAULT_PROMPT = "Ты — эксперт-ассистент AIMalb. Сегодня: %s. ТВОЯ ГЛАВНАЯ ЦЕЛЬ: Выдавать информацию максимально эффективно для экрана часов."
+    }
 }
