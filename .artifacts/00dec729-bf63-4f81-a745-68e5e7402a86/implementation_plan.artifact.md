@@ -1,32 +1,43 @@
-# Wear OS AI Assistant - Extreme Speed Optimization (v46)
+# Wear OS AI Assistant - Release Fix, Branding & Versioning (v47)
 
-This plan focuses on eliminating all remaining UI and audio latencies to make the application feel "instant" on real hardware.
+This plan fixes the release installation issue, restores the phone app's icon, and updates all versioning, build numbers, and project links in both applications with specific build numbers as requested.
 
 ## Proposed Changes
 
-### 1. Voice Engine (Minimal Latency)
+### 1. Release Build Fix (Signing)
 
-#### [MODIFY] [TtsManager.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/TtsManager.kt)
-- **Zero Start Delay**: Remove the 100ms safety delay in `speak()`. The engine should start immediately.
-- **Micro-Pause Between Lines**: Reduce the inter-phrase delay from 200ms to **50ms**. This maintains the distinction between sentences but feels much faster.
-- **Pre-loading**: Ensure the next phrase is prepared as soon as the current one starts.
+#### [MODIFY] [app/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/build.gradle.kts)
+#### [MODIFY] [phonecompanionmodule/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/build.gradle.kts)
+- Configure `signingConfigs` to use the **debug key for release builds**.
+- Set `versionCode` for the watch to **47**.
+- Set `versionCode` for the phone to **4**.
 
-### 2. UI Transitions (High Response)
+### 2. Companion App Icon Fix
 
-#### [MODIFY] [MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainActivity.kt)
-- **Fast Animations**: Reduce the `animateFloatAsState` (alpha transition) duration from 300ms to **100ms**.
-- **Snappy Scrolling**: Optimize the `animateScrollToItem` call. We'll use a faster animation spec to ensure the text "snaps" into the center position instantly as the voice moves.
-- **Hysteresis Refinement**: Reduce the centering threshold to make the highlight switch more responsive to small movements.
+#### [MODIFY] [phonecompanionmodule/src/main/res/mipmap-anydpi/ic_launcher.xml](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/res/mipmap-anydpi/ic_launcher.xml)
+#### [MODIFY] [phonecompanionmodule/src/main/res/mipmap-anydpi/ic_launcher_round.xml](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/res/mipmap-anydpi/ic_launcher_round.xml)
+- Update adaptive icons to use `@drawable/ic_aimalb_logo` as the foreground element.
 
-### 3. Networking & Logic
+### 3. Application Versioning & Links
 
-#### [MODIFY] [AiRepository.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/AiRepository.kt)
-- **Streamlining**: Remove any hidden logging or non-essential processing during the main query flow.
+#### [MODIFY] [app/src/main/java/com/malbandco/aimalb/presentation/MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainActivity.kt)
+- Update `AboutScreen` to display:
+    - Version: **`v1.0.4-beta`**
+    - Build: **`47`**
+    - GitHub: **`github.com/Malboron/AIMalbWearOS`**
+
+#### [MODIFY] [phonecompanionmodule/src/main/java/com/malbandco/phonecompanionmodule/MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/java/com/malbandco/phonecompanionmodule/MainActivity.kt)
+- Update the UI to display:
+    - Version: **`v1.0.3-beta`**
+    - Build: **`4`**
+    - GitHub: **`github.com/Malboron/AIMalbWearOS`**
 
 ## Verification Plan
 
 ### Manual Verification
-1.  **Response Start**: Ask a short question. Confirm the voice starts almost immediately after the loading screen appears.
-2.  **Rhythm Check**: Listen to a long paragraph. The 50ms pause should feel continuous yet punctuated.
-3.  **UI Flick**: Manually scroll the list. Confirm the highlight shifts to the center item with zero perceived lag (100ms animation).
-4.  **Auto-Scroll**: Confirm the list "flies" to the next spoken item without sluggishness.
+1.  **Installation**: Build and install Release APKs on both phone and watch.
+2.  **Versioning**:
+    - Watch: Confirm `v1.0.4-beta`, Build `47`.
+    - Phone: Confirm `v1.0.3-beta`, Build `4`.
+3.  **Link**: Verify the GitHub link is correct in both apps.
+4.  **Icon**: Verify the phone app icon is restored.

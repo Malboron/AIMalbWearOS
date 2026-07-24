@@ -15,16 +15,26 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 47
+        versionName = "1.0.4-beta"
 
+    }
+
+    signingConfigs {
+        getByName("debug") {
+            // Inherit default debug signing
+        }
     }
 
     buildTypes {
         release {
-            optimization {
-                enable = false
-            }
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
     compileOptions {

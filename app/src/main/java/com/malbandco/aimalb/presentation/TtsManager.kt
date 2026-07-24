@@ -37,10 +37,10 @@ class TtsManager(
                         if (index == phrases.size - 1) {
                             onAllCompleted()
                         } else if (!isPaused) {
-                            // Wait exactly 200ms before next phrase as requested
+                            // Reduced to 50ms for extreme speed as requested
                             handler.postDelayed({
                                 speakNext(index + 1)
-                            }, 200)
+                            }, 50)
                         }
                     }
                 }
@@ -57,10 +57,8 @@ class TtsManager(
         handler.removeCallbacksAndMessages(null)
         tts.stop()
         
-        // Short delay (100ms) for UI stability as requested in v43
-        handler.postDelayed({
-            speakNext(0)
-        }, 100)
+        // Zero delay start as requested in v46
+        speakNext(0)
     }
 
     private fun speakNext(index: Int) {

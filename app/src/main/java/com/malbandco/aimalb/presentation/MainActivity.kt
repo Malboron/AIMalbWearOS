@@ -250,7 +250,7 @@ fun RespondingScreen(viewModel: MainViewModel) {
             ) {
                 items(visiblePhrases.size) { index ->
                     val isActive = index == currentCenterIndex
-                    val alpha by animateFloatAsState(targetValue = if (isActive) 1f else 0.2f, animationSpec = tween(300))
+                    val alpha by animateFloatAsState(targetValue = if (isActive) 1f else 0.2f, animationSpec = tween(100))
                     Text(
                         text = visiblePhrases[index],
                         style = MaterialTheme.typography.bodyMedium.copy(
@@ -388,10 +388,12 @@ fun AboutScreen() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("AIMalb v1.0", style = MaterialTheme.typography.titleMedium)
-        Text("AI Assistant for Wear OS", textAlign = TextAlign.Center)
-        Spacer(Modifier.height(16.dp))
-        Text("GitHub: github.com/malbandco", color = Color.Cyan, fontSize = 12.sp)
+        Text("AIMalb", style = MaterialTheme.typography.titleMedium)
+        Text("v1.0.4-beta (Build 47)", style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(8.dp))
+        Text("AI Assistant for Wear OS", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(12.dp))
+        Text("github.com/Malboron/AIMalbWearOS", color = Color.Cyan, fontSize = 10.sp, textAlign = TextAlign.Center)
     }
 }
 

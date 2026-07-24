@@ -178,7 +178,13 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
 
         // Status Feedback
         when (syncStatus) {
-            SyncStatus.Idle -> {}
+            SyncStatus.Idle -> {
+                Spacer(modifier = Modifier.height(16.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("github.com/Malboron/AIMalbWearOS", color = Color.Gray, fontSize = 10.sp)
+                    Text("v1.0.3-beta (Build 4)", color = Color.DarkGray, fontSize = 10.sp)
+                }
+            }
             SyncStatus.Verifying -> {
                 CircularProgressIndicator(color = neonCyan, modifier = Modifier.size(24.dp))
                 Text("Verifying via Quad9...", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
