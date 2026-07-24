@@ -1,0 +1,432 @@
+package com.malbandco.aimalb.presentation
+
+import android.content.Intent
+import android.os.Bundle
+import android.speech.RecognizerIntent
+import android.view.WindowManager
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.TransformingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberTransformingLazyColumnState
+import androidx.wear.compose.material3.*
+import androidx.wear.compose.navigation.SwipeDismissableNavHost
+import androidx.wear.compose.navigation.composable
+import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
+import com.malbandco.aimalb.presentation.components.JumpingDots
+import com.malbandco.aimalb.presentation.theme.AIMalbTheme
+import kotlin.math.abs
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            WearApp()
+        }
+    }
+}
+
+object Routes {
+    const val HOME = "home"
+    const val LOADING = "loading"
+    const val RESPONDING = "responding"
+    const val SETTINGS_MENU = "settings_menu"
+    const val AI_SETTINGS = "ai_settings"
+    const val MODEL_SELECTION = "model_selection"
+    const val ABOUT = "about"
+}
+
+@Composable
+fun WearApp(viewModel: MainViewModel = viewModel()) {
+    val context = LocalContext.current
+    val navController = rememberSwipeDismissableNavController()
+    val appState = viewModel.appState.value
+    val isScreenLockActive = viewModel.isScreenLockActive.value
+
+    DisposableEffect(isScreenLockActive) {
+        val activity = context as? ComponentActivity
+        if (isScreenLockActive) {
+            activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.init(context)
+    }
+
+    // Navigation Sync with AppState
+    LaunchedEffect(appState) {
+        when (appState) {
+            AppState.LOADING -> {
+                if (navController.currentBackStackEntry?.destination?.route != Routes.LOADING) {
+                    navController.navigate(Routes.LOADING)
+                }
+            }
+            AppState.RESPONDING -> {
+                if (navController.currentBackStackEntry?.destination?.route != Routes.RESPONDING) {
+                    navController.navigate(Routes.RESPONDING) {
+                        // Ensure we remove LOADING from history so swipe-back is HOME
+                        popUpTo(Routes.HOME) { inclusive = false }
+                    }
+                }
+            }
+            AppState.IDLE -> {
+                val currentRoute = navController.currentBackStackEntry?.destination?.route
+                if (currentRoute == Routes.RESPONDING || currentRoute == Routes.LOADING) {
+                    navController.popBackStack(Routes.HOME, false)
+                }
+            }
+        }
+    }
+
+    AIMalbTheme {
+        AppScaffold {
+            SwipeDismissableNavHost(
+                navController = navController,
+                startDestination = Routes.HOME
+            ) {
+                composable(Routes.HOME) {
+                    HomeScreen(viewModel, navController)
+                }
+                composable(Routes.LOADING) {
+                    LoadingScreen(viewModel)
+                }
+                composable(Routes.RESPONDING) {
+                    RespondingScreen(viewModel)
+                }
+                composable(Routes.SETTINGS_MENU) {
+                    SettingsMenuScreen(navController)
+                }
+                composable(Routes.AI_SETTINGS) {
+                    AiSettingsScreen(viewModel, navController)
+                }
+                composable(Routes.MODEL_SELECTION) {
+                    ModelSelectionScreen(viewModel, navController)
+                }
+                composable(Routes.ABOUT) {
+                    AboutScreen()
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeScreen(viewModel: MainViewModel, navController: NavHostController) {
+    val responseText = viewModel.responseText.value
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let {
+            viewModel.onVoiceInputReceived(it)
+        }
+    }
+
+    val voiceIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+    }
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            MicButton(
+                onClick = { voiceLauncher.launch(voiceIntent) },
+                size = 80.dp,
+                icon = Icons.Default.Mic
+            )
+            if (responseText.startsWith("Error:") || responseText.startsWith("Ошибка")) {
+                Text(
+                    text = responseText,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)
+                )
+            }
+        }
+        
+        IconButton(
+            onClick = { navController.navigate(Routes.SETTINGS_MENU) },
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp)
+        ) {
+            Icon(Icons.Default.Settings, contentDescription = "Settings", modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+@Composable
+fun LoadingScreen(viewModel: MainViewModel) {
+    val statusText = viewModel.statusText.value
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = statusText,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        JumpingDots()
+    }
+}
+
+@Composable
+fun RespondingScreen(viewModel: MainViewModel) {
+    val visiblePhrases = viewModel.visiblePhrases.value
+    val ttsIndex = viewModel.currentIndex.value
+    val isPaused = viewModel.isPaused.value
+    val listState = rememberTransformingLazyColumnState()
+    val config = LocalConfiguration.current
+    val screenHeight = config.screenHeightDp.dp
+
+    LaunchedEffect(ttsIndex) {
+        if (ttsIndex >= 0 && ttsIndex < visiblePhrases.size) {
+            listState.animateScrollToItem(ttsIndex)
+        }
+    }
+
+    var stabilizedIndex by remember { mutableIntStateOf(-1) }
+    val currentCenterIndex by remember {
+        derivedStateOf {
+            val layoutInfo = listState.layoutInfo
+            val visibleItems = layoutInfo.visibleItems
+            if (visibleItems.isEmpty()) -1
+            else {
+                val viewportCenter = layoutInfo.viewportSize.height / 2
+                val bestItem = visibleItems.minByOrNull { item ->
+                    val itemMiddle = item.offset + item.transformedHeight / 2
+                    abs(itemMiddle - viewportCenter)
+                }
+                if (bestItem != null) {
+                    val currentItem = visibleItems.find { it.index == stabilizedIndex }
+                    if (currentItem == null || abs((bestItem.offset + bestItem.transformedHeight / 2) - viewportCenter) < abs((currentItem.offset + currentItem.transformedHeight / 2) - viewportCenter) - 20 || ttsIndex == bestItem.index) {
+                        stabilizedIndex = bestItem.index
+                    }
+                }
+                stabilizedIndex
+            }
+        }
+    }
+
+    ScreenScaffold(scrollState = listState) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            TransformingLazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = screenHeight / 2, bottom = screenHeight / 2 + 80.dp),
+                state = listState,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                items(visiblePhrases.size) { index ->
+                    val isActive = index == currentCenterIndex
+                    val alpha by animateFloatAsState(targetValue = if (isActive) 1f else 0.2f, animationSpec = tween(300))
+                    Text(
+                        text = visiblePhrases[index],
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = if (isActive) 18.sp else 14.sp,
+                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
+                        ),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp).alpha(alpha).fillMaxWidth()
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MicButton(onClick = { viewModel.reset() }, size = 48.dp, icon = Icons.Default.Mic)
+                Box(modifier = Modifier.size(16.dp))
+                ControlButton(icon = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, onClick = { viewModel.togglePauseResume() })
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsMenuScreen(navController: NavHostController) {
+    ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { Text("Настройки", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp)) }
+        item {
+            TitleCard(onClick = { navController.navigate(Routes.AI_SETTINGS) }, title = { Text("Настройки ИИ") }) {
+                Text("Ключ, Модель, Промпт", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        item {
+            TitleCard(onClick = { navController.navigate(Routes.ABOUT) }, title = { Text("О проекте") }) {
+                Text("Инфо и GitHub", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+    }
+}
+
+@Composable
+fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController) {
+    var key by remember { mutableStateOf(viewModel.getApiKey()) }
+    var prompt by remember { mutableStateOf(viewModel.getSystemPrompt()) }
+    val currentModel = viewModel.getModel()
+    val verificationStatus = viewModel.verificationStatus.value
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("AI Config", style = MaterialTheme.typography.titleSmall)
+        Spacer(Modifier.height(8.dp))
+        
+        SimpleInputField(value = key, onValueChange = { key = it }, placeholder = "Groq API Key")
+
+        // Verification Row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Button(
+                onClick = { 
+                    viewModel.setApiKey(key) // Save temporarily for verification
+                    viewModel.verifyKey() 
+                },
+                modifier = Modifier.height(32.dp).padding(horizontal = 4.dp)
+            ) {
+                Text("Проверить", fontSize = 10.sp)
+            }
+            
+            when (verificationStatus) {
+                VerificationStatus.Idle -> {}
+                VerificationStatus.Verifying -> CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                VerificationStatus.Success -> Text("🟢", fontSize = 14.sp)
+                is VerificationStatus.Error -> Text("🔴", fontSize = 14.sp)
+            }
+        }
+        
+        Button(
+            onClick = { navController.navigate(Routes.MODEL_SELECTION) },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+        ) {
+            Text("Модель: ${currentModel.split("/").last()}", fontSize = 12.sp)
+        }
+        
+        SimpleInputField(value = prompt, onValueChange = { prompt = it }, placeholder = "System Prompt", singleLine = false)
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Button(onClick = { 
+                viewModel.resetSystemPrompt() 
+                prompt = viewModel.getSystemPrompt()
+            }) { Text("Сброс", fontSize = 10.sp) }
+            
+            Button(onClick = { 
+                viewModel.setApiKey(key)
+                viewModel.setSystemPrompt(prompt)
+                navController.popBackStack()
+            }) { Text("OK", fontSize = 10.sp) }
+        }
+        Spacer(Modifier.height(40.dp))
+    }
+}
+
+@Composable
+fun ModelSelectionScreen(viewModel: MainViewModel, navController: NavHostController) {
+    val models = viewModel.availableModels
+    val current = viewModel.getModel()
+    
+    ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { Text("Выберите модель", style = MaterialTheme.typography.titleSmall) }
+        items(models.size) { index ->
+            val model = models[index]
+            val isSelected = model == current
+            Button(
+                onClick = { 
+                    viewModel.setModel(model)
+                    navController.popBackStack()
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                colors = if (isSelected) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors()
+            ) {
+                Text(model.split("/").last(), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun AboutScreen() {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("AIMalb v1.0", style = MaterialTheme.typography.titleMedium)
+        Text("AI Assistant for Wear OS", textAlign = TextAlign.Center)
+        Spacer(Modifier.height(16.dp))
+        Text("GitHub: github.com/malbandco", color = Color.Cyan, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun SimpleInputField(value: String, onValueChange: (String) -> Unit, placeholder: String, singleLine: Boolean = true) {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Text(placeholder, style = TextStyle(fontSize = 10.sp, color = Color.Gray))
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = singleLine,
+            textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+            cursorBrush = SolidColor(Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.DarkGray, shape = MaterialTheme.shapes.small)
+                .padding(8.dp)
+        )
+    }
+}
+
+@Composable
+fun MicButton(onClick: () -> Unit, size: androidx.compose.ui.unit.Dp, icon: ImageVector) {
+    Button(onClick = onClick, modifier = Modifier.size(size), contentPadding = PaddingValues(0.dp)) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(imageVector = icon, contentDescription = "Microphone", modifier = Modifier.size(size * 0.55f))
+        }
+    }
+}
+
+@Composable
+fun ControlButton(icon: ImageVector, onClick: () -> Unit) {
+    Button(onClick = onClick, modifier = Modifier.size(48.dp), contentPadding = PaddingValues(0.dp)) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(imageVector = icon, contentDescription = "Control", modifier = Modifier.size(26.dp))
+        }
+    }
+}

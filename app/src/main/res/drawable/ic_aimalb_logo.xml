@@ -1,0 +1,27 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Neon Ring (Strict 1:1, Radius 30dp) -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="2"
+        android:pathData="M 54, 54 m -30, 0 a 30,30 0 1,0 60,0 a 30,30 0 1,0 -60,0" />
+
+    <!-- Microphone (Neon Cyan) -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M50,44 C50,38 58,38 58,44 L58,56 C58,62 50,62 50,56 Z M46,54 C46,65 62,65 62,54 M54,64 L54,72 M48,72 L60,72" />
+
+    <!-- Sound Arcs -->
+    <path
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M40,48 C37,51 37,55 40,58 M35,44 C31,48 31,58 35,62 M68,48 C71,51 71,55 68,58 M73,44 C77,48 77,58 73,62" />
+
+</vector>
