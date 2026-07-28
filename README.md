@@ -18,11 +18,11 @@
 ## 🛠 Установка
 
 ### 1. Часы (Wear OS)
-1. Скачайте последний билд: [AIMalb1.0.7-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.0.7-beta/AIMalb1.0.7-beta-release.apk)
+1. Скачайте последний билд: [AIMalb1.0.7-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.2.6-beta/AIMalb1.2.6-beta-release.apk)
 2. Установите его через ADB или любой установщик APK для Wear OS.
 
 ### 2. Смартфон (Companion)
-1. Скачайте: [AIMalbCompanion1.0.6-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.0.7-beta/AIMalbCompanion1.0.6-beta-release.apk)
+1. Скачайте: [AIMalbCompanion1.0.6-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.0.9-beta/AIMalbCompanion1.0.9-beta-release.apk)
 2. Установите на телефон для удобного ввода настроек.
 
 ---
@@ -59,8 +59,8 @@
 
 Проект состоит из двух приложений:
 
-* [AIMalb1.0.7-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.0.7-beta/AIMalb1.0.7-beta-release.apk) — основное приложение для часов
-* [AIMalbCompanion1.0.6-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.0.7-beta/AIMalbCompanion1.0.6-beta-release.apk) — приложение-компаньон для смартфона
+* [AIMalb1.0.7-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.2.6-beta/AIMalb1.2.6-beta-release.apk) — основное приложение для часов
+* [AIMalbCompanion1.0.6-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.0.9-beta/AIMalbCompanion1.0.9-beta-release.apk) — приложение-компаньон для смартфона
 
 Связь между устройствами выполняется через Wear OS Data Layer.
 
