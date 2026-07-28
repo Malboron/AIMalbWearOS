@@ -4,11 +4,16 @@ import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
+/**
+ * Менеджер настроек: обеспечивает безопасное хранение ключей и параметров 
+ * с использованием аппаратного шифрования (EncryptedSharedPreferences).
+ */
 class PreferencesManager(context: Context) {
     private val masterKey = MasterKey.Builder(context)
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
+    // Использование зашифрованного хранилища для защиты API-ключа
     private val prefs = EncryptedSharedPreferences.create(
         context,
         "aimalb_secure_prefs",
@@ -58,6 +63,9 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean("long_press_shortcut", false)
         set(value) = prefs.edit().putBoolean("long_press_shortcut", value).apply()
 
+    /**
+     * Возврат системного промпта к заводским настройкам.
+     */
     fun resetPrompt() {
         systemPrompt = DEFAULT_PROMPT
     }

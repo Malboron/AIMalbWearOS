@@ -1,6 +1,7 @@
 package com.malbandco.aimalb.presentation
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -19,8 +20,20 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
+/**
+ * Состояния основного экрана приложения
+ */
 enum class AppState {
-    IDLE, LOADING, RESPONDING
+    IDLE,       
+    LOADING,    
+    RESPONDING  
+}
+
+/**
+ * Состояния воспроизведения голоса
+ */
+enum class PlaybackState {
+    PLAYING, PAUSED, FINISHED
 }
 
 sealed class VerificationStatus {
@@ -30,10 +43,17 @@ sealed class VerificationStatus {
     data class Error(val message: String) : VerificationStatus()
 }
 
+/**
+ * Главная ViewModel: управляет логикой, состояниями и связью между UI и данными.
+ * v1.2.1: Монолитная озвучка и синхронизация по символам.
+ */
 class MainViewModel : ViewModel() {
 
     private val _appState = mutableStateOf(AppState.IDLE)
     val appState: State<AppState> = _appState
+
+    private val _playbackState = mutableStateOf(PlaybackState.FINISHED)
+    val playbackState: State<PlaybackState> = _playbackState
 
     private val _responseText = mutableStateOf("")
     val responseText: State<String> = _responseText
@@ -47,9 +67,6 @@ class MainViewModel : ViewModel() {
     private val _currentIndex = mutableIntStateOf(-1)
     val currentIndex: State<Int> = _currentIndex
 
-    private val _isPaused = mutableStateOf(false)
-    val isPaused: State<Boolean> = _isPaused
-
     private val _isScreenLockActive = mutableStateOf(false)
     val isScreenLockActive: State<Boolean> = _isScreenLockActive
 
@@ -60,12 +77,14 @@ class MainViewModel : ViewModel() {
     val shouldTriggerVoice: State<Boolean> = _shouldTriggerVoice
 
     private var allPhrases: List<String> = emptyList()
+    private var phraseOffsets: List<Int> = emptyList() // v1.2.1: Начальные индексы символов для сегментов
+    
     private var ttsManager: TtsManager? = null
     private var screenStayAwakeJob: Job? = null
     
     private var _repository: AiRepository? = null
     private val repository: AiRepository
-        get() = _repository ?: throw IllegalStateException("Repository not initialized. Call init(context) first.")
+        get() = _repository ?: throw IllegalStateException("Repository not initialized.")
 
     private var preferencesManager: PreferencesManager? = null
     private var hasAutoListened = false
@@ -86,45 +105,33 @@ class MainViewModel : ViewModel() {
         if (ttsManager == null) {
             ttsManager = TtsManager(
                 context,
-                onPhraseCompleted = { index ->
+                onCharacterReached = { charIndex ->
                     viewModelScope.launch(Dispatchers.Main) {
-                        _visiblePhrases.value = allPhrases.take(index + 1)
-                        _currentIndex.intValue = index
+                        // Находим индекс сегмента, которому принадлежит текущий символ
+                        val segmentIndex = phraseOffsets.indexOfLast { it <= charIndex }
+                        if (segmentIndex >= 0 && segmentIndex != _currentIndex.intValue) {
+                            _currentIndex.intValue = segmentIndex
+                            _playbackState.value = PlaybackState.PLAYING
+                        }
                     }
                 },
                 onAllCompleted = {
-                    startScreenTimeoutCountdown(10000)
+                    viewModelScope.launch(Dispatchers.Main) {
+                        _playbackState.value = PlaybackState.FINISHED
+                        startScreenTimeoutCountdown(10000)
+                    }
                 }
             )
         }
 
         if (_repository == null) {
-            _isScreenLockActive.value = true
-            startScreenTimeoutCountdown(10000)
-
-            val logging = HttpLoggingInterceptor().apply {
-                level = HttpLoggingInterceptor.Level.BODY
-            }
+            val logging = HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY }
             val client = OkHttpClient.Builder()
                 .addInterceptor(logging)
                 .addInterceptor { chain ->
                     val original = chain.request()
                     val requestBuilder = original.newBuilder()
-                    
-                    val urlString = original.url.toString()
-                    if (urlString.contains("duckduckgo.com")) {
-                        requestBuilder
-                            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0")
-                            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-                            .header("Accept-Language", "en-US,en;q=0.5")
-                            .header("Referer", "https://lite.duckduckgo.com/")
-                            .header("Upgrade-Insecure-Requests", "1")
-                            .header("Sec-Fetch-Dest", "document")
-                            .header("Sec-Fetch-Mode", "navigate")
-                            .header("Sec-Fetch-Site", "same-origin")
-                    } else {
-                        requestBuilder.header("User-Agent", "AIMalb/1.0 WearOS")
-                    }
+                    requestBuilder.header("User-Agent", "AIMalb/1.0 WearOS")
                     chain.proceed(requestBuilder.build())
                 }
                 .build()
@@ -151,17 +158,13 @@ class MainViewModel : ViewModel() {
 
     fun getApiKey() = preferencesManager?.apiKey ?: ""
     fun setApiKey(key: String) { preferencesManager?.apiKey = key }
-    
     fun getModel() = preferencesManager?.model ?: PreferencesManager.DEFAULT_MODEL
     fun setModel(model: String) { preferencesManager?.model = model }
-    
     fun getSystemPrompt() = preferencesManager?.systemPrompt ?: PreferencesManager.DEFAULT_PROMPT
     fun setSystemPrompt(prompt: String) { preferencesManager?.systemPrompt = prompt }
     fun resetSystemPrompt() { preferencesManager?.resetPrompt() }
-
     fun getAutoListen() = preferencesManager?.autoListenOnOpen ?: false
     fun setAutoListen(value: Boolean) { preferencesManager?.autoListenOnOpen = value }
-
     fun getLongPressEnabled() = preferencesManager?.longPressShortcutEnabled ?: false
     fun setLongPressEnabled(value: Boolean) { preferencesManager?.longPressShortcutEnabled = value }
 
@@ -172,42 +175,45 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun triggerVoiceManually() {
+    fun triggerVoiceManually() { _shouldTriggerVoice.value = true }
+    
+    /**
+     * v1.2.3: Мгновенный запуск микрофона с экрана ответа.
+     */
+    fun triggerVoiceDirectly() {
+        ttsManager?.stop()
+        _currentIndex.intValue = -1
+        _playbackState.value = PlaybackState.FINISHED
         _shouldTriggerVoice.value = true
     }
 
-    fun onVoiceTriggerConsumed() {
-        _shouldTriggerVoice.value = false
-    }
+    fun onVoiceTriggerConsumed() { _shouldTriggerVoice.value = false }
 
     fun verifyKey() {
         val key = getApiKey()
         if (key.isBlank()) {
-            _verificationStatus.value = VerificationStatus.Error("Key is empty")
+            _verificationStatus.value = VerificationStatus.Error("Ключ пуст")
             return
         }
-
         _verificationStatus.value = VerificationStatus.Verifying
         viewModelScope.launch {
             repository.verifyApiKey(key).fold(
                 onSuccess = { _verificationStatus.value = VerificationStatus.Success },
-                onFailure = { _verificationStatus.value = VerificationStatus.Error(it.message ?: "Failed") }
+                onFailure = { _verificationStatus.value = VerificationStatus.Error("Сбой") }
             )
         }
     }
 
     fun onVoiceInputReceived(text: String) {
         if (text.isBlank()) return
-        
         stopScreenTimeoutCountdown()
         _isScreenLockActive.value = true
-        
         _appState.value = AppState.LOADING
         _responseText.value = ""
         _statusText.value = "Старт..."
         _visiblePhrases.value = emptyList()
         _currentIndex.intValue = -1
-        _isPaused.value = false
+        _playbackState.value = PlaybackState.FINISHED
         
         viewModelScope.launch {
             try {
@@ -216,31 +222,91 @@ class MainViewModel : ViewModel() {
                     apiKey = getApiKey(),
                     model = getModel(),
                     systemPromptTemplate = getSystemPrompt()
-                ) { status ->
-                    _statusText.value = status
-                }
+                ) { status -> _statusText.value = status }
                 startResponding(aiResponse)
             } catch (e: Exception) {
-                _responseText.value = "Error: ${e.message ?: "Unknown error"}"
+                _responseText.value = "Ошибка: ${e.message}"
                 _appState.value = AppState.IDLE
                 startScreenTimeoutCountdown(5000)
             }
         }
     }
 
+    /**
+     * v1.2.1: Мгновенное переключение экрана и умная сегментация.
+     */
     private fun startResponding(text: String) {
         stopScreenTimeoutCountdown()
         _isScreenLockActive.value = true
-        _appState.value = AppState.RESPONDING
         
         val sanitizedText = text.replace("\\n", "\n").replace("/n", "\n")
         _responseText.value = sanitizedText
         
-        _currentIndex.intValue = -1
-        _visiblePhrases.value = emptyList()
+        // Умная сегментация (12-40 символов)
+        val result = smartSplit(sanitizedText)
+        allPhrases = result.first
+        phraseOffsets = result.second
         
-        allPhrases = sanitizedText.split(Regex("(?<=[.!?])\\s+|\\n")).filter { it.isNotBlank() }
+        _visiblePhrases.value = allPhrases
+        _currentIndex.intValue = 0
+        
+        // Мгновенно переходим к ответу
+        _appState.value = AppState.RESPONDING
+        
+        // Запуск монолитного голоса
         ttsManager?.speak(sanitizedText)
+    }
+
+    /**
+     * Алгоритм разбиения текста на сегменты.
+     * v1.2.2: Приоритет - одно предложение на строку (лимит 15-45 символов).
+     */
+    private fun smartSplit(text: String): Pair<List<String>, List<Int>> {
+        val segments = mutableListOf<String>()
+        val offsets = mutableListOf<Int>()
+        
+        // Разделяем по знакам препинания (предложениям) и переносам строк
+        val rawSentences = text.split(Regex("(?<=[.!?])\\s+|\\n")).filter { it.isNotBlank() }
+        var lastSearchIndex = 0
+
+        for (sentence in rawSentences) {
+            val sTrim = sentence.trim()
+            val startIdx = text.indexOf(sTrim, lastSearchIndex)
+            if (startIdx == -1) continue
+            lastSearchIndex = startIdx + sTrim.length
+
+            if (sTrim.length <= 45) {
+                // Одно предложение на строку - это приоритет (даже если оно короче 15)
+                segments.add(sTrim)
+                offsets.add(startIdx)
+            } else {
+                // Если предложение слишком длинное (> 45), делим его по словам
+                val words = sTrim.split(" ")
+                var currentChunk = StringBuilder()
+                var currentChunkOffset = startIdx
+
+                for (word in words) {
+                    val wordToAppend = if (currentChunk.isEmpty()) word else " $word"
+                    
+                    if (currentChunk.length + wordToAppend.length > 45 && currentChunk.isNotEmpty()) {
+                        segments.add(currentChunk.toString())
+                        offsets.add(currentChunkOffset)
+                        
+                        // Смещение для следующего куска внутри того же предложения
+                        val nextWordIdx = text.indexOf(word, currentChunkOffset + 1)
+                        currentChunk = StringBuilder(word)
+                        currentChunkOffset = if (nextWordIdx != -1) nextWordIdx else currentChunkOffset
+                    } else {
+                        currentChunk.append(wordToAppend)
+                    }
+                }
+                if (currentChunk.isNotEmpty()) {
+                    segments.add(currentChunk.toString())
+                    offsets.add(currentChunkOffset)
+                }
+            }
+        }
+        return Pair(segments, offsets)
     }
 
     private fun startScreenTimeoutCountdown(millis: Long) {
@@ -257,15 +323,23 @@ class MainViewModel : ViewModel() {
     }
 
     fun togglePauseResume() {
-        if (_isPaused.value) {
-            stopScreenTimeoutCountdown()
-            _isScreenLockActive.value = true
-            ttsManager?.resume()
-            _isPaused.value = false
-        } else {
-            ttsManager?.pause()
-            _isPaused.value = true
-            startScreenTimeoutCountdown(15000)
+        when (_playbackState.value) {
+            PlaybackState.PLAYING -> {
+                ttsManager?.pause()
+                _playbackState.value = PlaybackState.PAUSED
+                startScreenTimeoutCountdown(15000)
+            }
+            PlaybackState.PAUSED -> {
+                stopScreenTimeoutCountdown()
+                _isScreenLockActive.value = true
+                ttsManager?.resume()
+                _playbackState.value = PlaybackState.PLAYING
+            }
+            PlaybackState.FINISHED -> {
+                stopScreenTimeoutCountdown()
+                _isScreenLockActive.value = true
+                ttsManager?.speak(_responseText.value)
+            }
         }
     }
 
@@ -274,9 +348,10 @@ class MainViewModel : ViewModel() {
         ttsManager?.stop()
         _appState.value = AppState.IDLE
         _responseText.value = ""
+        _statusText.value = ""
         _visiblePhrases.value = emptyList()
         _currentIndex.intValue = -1
-        _isPaused.value = false
+        _playbackState.value = PlaybackState.FINISHED
         startScreenTimeoutCountdown(5000)
     }
 

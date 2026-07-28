@@ -3,10 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-base {
-    archivesName.set("AIMalb1.0.7-beta")
-}
-
 android {
     namespace = "com.malbandco.aimalb"
     compileSdk = 36
@@ -15,19 +11,13 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 30
         targetSdk = 36
-        versionCode = 50
-        versionName = "1.0.7-beta"
-
-    }
-
-    // Modern way to rename APK/AAB base
-    base {
-        archivesName.set("AIMalb${android.defaultConfig.versionName}")
+        versionCode = 66
+        versionName = "1.2.6-beta"
     }
 
     signingConfigs {
         getByName("debug") {
-            // Inherit default debug signing
+            // Use debug signing for all builds
         }
     }
 
@@ -42,6 +32,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -50,6 +41,12 @@ android {
     buildFeatures {
         compose = true
     }
+}
+
+// Fixed naming: Versioned name for all builds. 
+// Note: If this breaks Android Studio "Run", the user will need to adjust deployment settings.
+base {
+    archivesName.set("AIMalb1.2.6-beta")
 }
 
 dependencies {
@@ -72,6 +69,7 @@ dependencies {
     implementation(libs.okhttp.logging)
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.security.crypto)
+    implementation(libs.zxing.core)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.test.manifest)

@@ -3,10 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-base {
-    archivesName.set("AIMalbCompanion1.0.6-beta")
-}
-
 android {
     namespace = "com.malbandco.phonecompanionmodule"
     compileSdk = 37
@@ -15,15 +11,14 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.6-beta"
+        versionCode = 11
+        versionName = "1.0.9-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
         getByName("debug") {
-            // Inherit default debug signing
         }
     }
 
@@ -47,6 +42,11 @@ android {
     }
 }
 
+// Fixed naming for Companion app
+base {
+    archivesName.set("AIMalbCompanion1.0.9-beta")
+}
+
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.activity.compose)
@@ -65,7 +65,6 @@ dependencies {
     implementation(libs.retrofit.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
-    implementation(libs.okhttp.dnsoverhttps)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.compose.bom))

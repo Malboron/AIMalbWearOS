@@ -14,14 +14,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.dnsoverhttps.DnsOverHttps
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Proxy
 import java.util.concurrent.TimeUnit
 
 sealed class SyncStatus {
@@ -32,6 +27,10 @@ sealed class SyncStatus {
     data class Error(val message: String) : SyncStatus()
 }
 
+/**
+ * ViewModel компаньона.
+ * v1.2.4: Удалена логика прокси и DNS, поддержка полного промпта.
+ */
 class CompanionViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _syncStatus = mutableStateOf<SyncStatus>(SyncStatus.Idle)
@@ -44,47 +43,11 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             level = HttpLoggingInterceptor.Level.BODY
         }
         
-        val clientBuilder = OkHttpClient.Builder()
+        val client = OkHttpClient.Builder()
             .addInterceptor(logging)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
-
-        if (prefs.useDoH) {
-            val appClient = OkHttpClient.Builder().build()
-            
-            // Primary: Quad9 (9.9.9.9)
-            val dns = DnsOverHttps.Builder()
-                .client(appClient)
-                .url("https://dns.quad9.net/dns-query".toHttpUrl())
-                .bootstrapDnsHosts(listOf(
-                    InetAddress.getByName("9.9.9.9"),
-                    InetAddress.getByName("149.112.112.112")
-                ))
-                .build()
-            
-            // If Quad9 is blocked, the request will fail. 
-            // For true fallback we'd need a custom Dns implementation.
-            // For now, using Quad9 as primary confirmed working in 2026.
-            clientBuilder.dns(dns)
-        }
-
-        if (prefs.proxyHost.isNotEmpty()) {
-            val port = prefs.proxyPort.toIntOrNull() ?: 8080
-            val proxy = Proxy(Proxy.Type.HTTP, InetSocketAddress(prefs.proxyHost, port))
-            clientBuilder.proxy(proxy)
-            
-            if (prefs.proxyUser.isNotEmpty()) {
-                val authenticator = Authenticator { _, response ->
-                    val credential = Credentials.basic(prefs.proxyUser, prefs.proxyPass)
-                    response.request.newBuilder()
-                        .header("Proxy-Authorization", credential)
-                        .build()
-                }
-                clientBuilder.proxyAuthenticator(authenticator)
-            }
-        }
-
-        val client = clientBuilder.build()
+            .build()
 
         Retrofit.Builder()
             .baseUrl("https://api.groq.com/")
@@ -94,24 +57,13 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             .create(CompanionGroqApi::class.java)
     }
 
-    fun getProxyHost() = prefs.proxyHost
-    fun setProxyHost(v: String) { prefs.proxyHost = v }
-    fun getProxyPort() = prefs.proxyPort
-    fun setProxyPort(v: String) { prefs.proxyPort = v }
-    fun getProxyUser() = prefs.proxyUser
-    fun setProxyUser(v: String) { prefs.proxyUser = v }
-    fun getProxyPass() = prefs.proxyPass
-    fun setProxyPass(v: String) { prefs.proxyPass = v }
-    fun getUseDoH() = prefs.useDoH
-    fun setUseDoH(v: Boolean) { prefs.useDoH = v }
-
     fun getSystemPrompt() = prefs.systemPrompt
     fun setSystemPrompt(v: String) { prefs.systemPrompt = v }
     fun resetSystemPrompt() { prefs.resetPrompt() }
 
     fun verifyKey(key: String) {
         if (key.isBlank()) {
-            _syncStatus.value = SyncStatus.Error("Key is empty")
+            _syncStatus.value = SyncStatus.Error("Ключ пуст")
             return
         }
 
@@ -120,17 +72,20 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val authHeader = if (key.startsWith("Bearer ")) key else "Bearer $key"
                 api.verifyKey(authHeader)
-                _syncStatus.value = SyncStatus.Success // Show success if verification passed
+                _syncStatus.value = SyncStatus.Success
             } catch (e: Exception) {
                 Log.e("CompanionVM", "Verification failed", e)
-                _syncStatus.value = SyncStatus.Error("Verification failed: ${e.message}")
+                _syncStatus.value = SyncStatus.Error("Ошибка проверки: ${e.message}")
             }
         }
     }
 
+    /**
+     * Синхронизация всех данных (Ключ + Полный Промпт) с часами.
+     */
     fun syncToWatch(key: String) {
         if (key.isBlank()) {
-            _syncStatus.value = SyncStatus.Error("Key is empty")
+            _syncStatus.value = SyncStatus.Error("Ключ пуст")
             return
         }
         
@@ -140,25 +95,28 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 val dataClient = Wearable.getDataClient(getApplication<Application>())
                 val messageClient = Wearable.getMessageClient(getApplication<Application>())
                 val nodeClient = Wearable.getNodeClient(getApplication<Application>())
+                val currentPrompt = prefs.systemPrompt
 
-                // 1. Data Layer Sync (Persistent)
-                val putDataReq = PutDataMapRequest.create("/groq_key").apply {
+                // 1. Data Layer Sync (Для сохранности при перезагрузке)
+                val putDataReq = PutDataMapRequest.create("/sync_data").apply {
                     dataMap.putString("key", key)
-                    dataMap.putLong("timestamp", System.currentTimeMillis()) // Force change trigger
+                    dataMap.putString("prompt", currentPrompt)
+                    dataMap.putLong("timestamp", System.currentTimeMillis())
                 }.asPutDataRequest()
                 putDataReq.setUrgent()
                 dataClient.putDataItem(putDataReq).await()
 
-                // 2. Message API Sync (Instant for active app)
+                // 2. Message API Sync (Для мгновенного обновления без задержек)
                 val nodes = nodeClient.connectedNodes.await()
                 nodes.forEach { node ->
                     messageClient.sendMessage(node.id, "/sync_key", key.toByteArray()).await()
+                    messageClient.sendMessage(node.id, "/sync_prompt", currentPrompt.toByteArray()).await()
                 }
                 
                 _syncStatus.value = SyncStatus.Success
             } catch (e: Exception) {
                 Log.e("CompanionVM", "Sync failed", e)
-                _syncStatus.value = SyncStatus.Error("Sync failed: ${e.message}")
+                _syncStatus.value = SyncStatus.Error("Сбой синхронизации: ${e.message}")
             }
         }
     }

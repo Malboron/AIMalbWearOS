@@ -1,95 +1,88 @@
 package com.malbandco.aimalb.presentation
 
 import android.content.Context
-import android.os.Handler
-import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 
+/**
+ * Менеджер управления синтезом речи (TTS). 
+ * v1.2.1: Монолитная озвучка (весь текст за один вызов) для исключения пауз на реальных часах.
+ */
 class TtsManager(
     context: Context,
-    private val onPhraseCompleted: (Int) -> Unit,
+    private val onCharacterReached: (Int) -> Unit, // v1.2.1: Передаем индекс текущего символа
     private val onAllCompleted: () -> Unit
 ) : TextToSpeech.OnInitListener {
 
     private var tts: TextToSpeech = TextToSpeech(context, this)
     private var isInitialized = false
-    private var phrases: List<String> = emptyList()
+    private var currentText: String = ""
     private var isPaused = false
-    private var currentPlayingIndex = -1
-    private val handler = Handler(Looper.getMainLooper())
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
             tts.language = Locale.getDefault()
             isInitialized = true
+            
+            // v1.2.4: Разогрев движка пустой строкой
+            tts.speak(" ", TextToSpeech.QUEUE_FLUSH, null, "priming")
+            
             tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
-                    utteranceId?.toIntOrNull()?.let { index ->
-                        currentPlayingIndex = index
-                        onPhraseCompleted(index)
-                    }
+                    // Сигнализируем о начале воспроизведения всего монолита
+                    onCharacterReached(0)
                 }
                 
                 override fun onDone(utteranceId: String?) {
-                    utteranceId?.toIntOrNull()?.let { index ->
-                        if (index == phrases.size - 1) {
-                            onAllCompleted()
-                        } else if (!isPaused) {
-                            // Reduced to 50ms for extreme speed as requested
-                            handler.postDelayed({
-                                speakNext(index + 1)
-                            }, 50)
-                        }
-                    }
+                    onAllCompleted()
                 }
 
                 override fun onError(utteranceId: String?) {}
+
+                /**
+                 * v1.2.1: Критически важный метод для синхронизации текста с монолитным звуком.
+                 * Вызывается системой при начале произношения определенного диапазона символов.
+                 */
+                override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                    onCharacterReached(start)
+                }
             })
         }
     }
 
+    /**
+     * Зачитать весь текст одним потоком.
+     */
     fun speak(text: String) {
-        phrases = text.split(Regex("(?<=[.!?])\\s+|\\n")).filter { it.isNotBlank() }
-        currentPlayingIndex = -1
+        if (!isInitialized) return
+        currentText = text
         isPaused = false
-        handler.removeCallbacksAndMessages(null)
-        tts.stop()
-        
-        // Zero delay start as requested in v46
-        speakNext(0)
-    }
-
-    private fun speakNext(index: Int) {
-        if (!isInitialized || isPaused || index >= phrases.size) return
-        tts.speak(phrases[index], TextToSpeech.QUEUE_FLUSH, null, index.toString())
+        // QUEUE_FLUSH обрывает старое и мгновенно начинает новое
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "monolithic_utterance")
     }
 
     fun pause() {
         isPaused = true
-        handler.removeCallbacksAndMessages(null)
         tts.stop()
     }
 
     fun resume() {
-        if (isPaused) {
+        if (isPaused && currentText.isNotEmpty()) {
             isPaused = false
-            val resumeIndex = if (currentPlayingIndex >= 0) currentPlayingIndex else 0
-            speakNext(resumeIndex)
+            // К сожалению, системный TTS не умеет возобновлять с середины фразы.
+            // При нажатии Плей мы перезапускаем монолит.
+            speak(currentText)
         }
     }
 
     fun stop() {
         isPaused = false
-        currentPlayingIndex = -1
-        phrases = emptyList()
-        handler.removeCallbacksAndMessages(null)
+        currentText = ""
         tts.stop()
     }
 
     fun release() {
-        handler.removeCallbacksAndMessages(null)
         tts.stop()
         tts.shutdown()
     }

@@ -11,7 +11,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
@@ -24,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -42,9 +45,13 @@ import androidx.wear.compose.navigation.SwipeDismissableNavHost
 import androidx.wear.compose.navigation.composable
 import androidx.wear.compose.navigation.rememberSwipeDismissableNavController
 import com.malbandco.aimalb.presentation.components.JumpingDots
+import com.malbandco.aimalb.presentation.components.QRCodeHelper
 import com.malbandco.aimalb.presentation.theme.AIMalbTheme
 import kotlin.math.abs
 
+/**
+ * Главная точка входа приложения. Управляет жизненным циклом и аппаратными кнопками.
+ */
 class MainActivity : ComponentActivity() {
     private var mainViewModel: MainViewModel? = null
 
@@ -88,14 +95,41 @@ object Routes {
     const val MODEL_SELECTION = "model_selection"
     const val PROMPT_EDITOR = "prompt_editor"
     const val ABOUT = "about"
+    const val QR_CODE = "qr_code" // v1.2.5
 }
 
+/**
+ * Корневой Composable. Управляет навигацией и системными флагами.
+ */
 @Composable
 fun WearApp(viewModel: MainViewModel = viewModel()) {
     val context = LocalContext.current
     val navController = rememberSwipeDismissableNavController()
     val appState = viewModel.appState.value
     val isScreenLockActive = viewModel.isScreenLockActive.value
+    val shouldTriggerVoice = viewModel.shouldTriggerVoice.value
+
+    // Глобальный запуск микрофона на уровне приложения
+    val voiceLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let {
+            viewModel.onVoiceInputReceived(it)
+        }
+    }
+
+    val voiceIntent = remember {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        }
+    }
+
+    LaunchedEffect(shouldTriggerVoice) {
+        if (shouldTriggerVoice) {
+            voiceLauncher.launch(voiceIntent)
+            viewModel.onVoiceTriggerConsumed()
+        }
+    }
 
     DisposableEffect(isScreenLockActive) {
         val activity = context as? ComponentActivity
@@ -111,7 +145,6 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
         viewModel.init(context)
     }
 
-    // Navigation Sync with AppState
     LaunchedEffect(appState) {
         when (appState) {
             AppState.LOADING -> {
@@ -122,7 +155,6 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
             AppState.RESPONDING -> {
                 if (navController.currentBackStackEntry?.destination?.route != Routes.RESPONDING) {
                     navController.navigate(Routes.RESPONDING) {
-                        // Ensure we remove LOADING from history so swipe-back is HOME
                         popUpTo(Routes.HOME) { inclusive = false }
                     }
                 }
@@ -142,68 +174,38 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
                 navController = navController,
                 startDestination = Routes.HOME
             ) {
-                composable(Routes.HOME) {
-                    HomeScreen(viewModel, navController)
+                composable(Routes.HOME) { 
+                    HomeScreen(viewModel, navController, onMicClick = { voiceLauncher.launch(voiceIntent) }) 
                 }
-                composable(Routes.LOADING) {
-                    LoadingScreen(viewModel)
-                }
-                composable(Routes.RESPONDING) {
-                    RespondingScreen(viewModel)
-                }
-                composable(Routes.SETTINGS_MENU) {
-                    SettingsMenuScreen(navController)
-                }
-                composable(Routes.AI_SETTINGS) {
-                    AiSettingsScreen(viewModel, navController)
-                }
-                composable(Routes.MODEL_SELECTION) {
-                    ModelSelectionScreen(viewModel, navController)
-                }
-                composable(Routes.PROMPT_EDITOR) {
-                    PromptEditorScreen(viewModel, navController)
-                }
-                composable(Routes.ABOUT) {
-                    AboutScreen()
-                }
+                composable(Routes.LOADING) { LoadingScreen(viewModel) }
+                composable(Routes.RESPONDING) { RespondingScreen(viewModel) }
+                composable(Routes.SETTINGS_MENU) { SettingsMenuScreen(navController) }
+                composable(Routes.AI_SETTINGS) { AiSettingsScreen(viewModel, navController) }
+                composable(Routes.MODEL_SELECTION) { ModelSelectionScreen(viewModel, navController) }
+                composable(Routes.PROMPT_EDITOR) { PromptEditorScreen(viewModel, navController) }
+                composable(Routes.ABOUT) { AboutScreen(navController) }
+                composable(Routes.QR_CODE) { QRCodeScreen() }
             }
         }
     }
 }
 
 @Composable
-fun HomeScreen(viewModel: MainViewModel, navController: NavHostController) {
+fun HomeScreen(
+    viewModel: MainViewModel, 
+    navController: NavHostController,
+    onMicClick: () -> Unit
+) {
     val responseText = viewModel.responseText.value
-    val shouldTriggerVoice = viewModel.shouldTriggerVoice.value
-    
-    val voiceLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.let {
-            viewModel.onVoiceInputReceived(it)
-        }
-    }
 
-    val voiceIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-        putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-    }
-
-    // Auto-listen logic & Hardware button sync
     LaunchedEffect(Unit) {
         viewModel.triggerAutoListenIfNeeded()
-    }
-
-    LaunchedEffect(shouldTriggerVoice) {
-        if (shouldTriggerVoice) {
-            voiceLauncher.launch(voiceIntent)
-            viewModel.onVoiceTriggerConsumed()
-        }
     }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             MicButton(
-                onClick = { voiceLauncher.launch(voiceIntent) },
+                onClick = onMicClick,
                 size = 80.dp,
                 icon = Icons.Default.Mic
             )
@@ -222,7 +224,7 @@ fun HomeScreen(viewModel: MainViewModel, navController: NavHostController) {
             onClick = { navController.navigate(Routes.SETTINGS_MENU) },
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp)
         ) {
-            Icon(Icons.Default.Settings, contentDescription = "Settings", modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Settings, contentDescription = "Настройки", modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -250,7 +252,7 @@ fun LoadingScreen(viewModel: MainViewModel) {
 fun RespondingScreen(viewModel: MainViewModel) {
     val visiblePhrases = viewModel.visiblePhrases.value
     val ttsIndex = viewModel.currentIndex.value
-    val isPaused = viewModel.isPaused.value
+    val playbackState = viewModel.playbackState.value
     val listState = rememberTransformingLazyColumnState()
     val config = LocalConfiguration.current
     val screenHeight = config.screenHeightDp.dp
@@ -311,9 +313,15 @@ fun RespondingScreen(viewModel: MainViewModel) {
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                MicButton(onClick = { viewModel.reset() }, size = 48.dp, icon = Icons.Default.Mic)
+                MicButton(onClick = { viewModel.triggerVoiceDirectly() }, size = 48.dp, icon = Icons.Default.Mic)
                 Box(modifier = Modifier.size(16.dp))
-                ControlButton(icon = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause, onClick = { viewModel.togglePauseResume() })
+                
+                val controlIcon = when (playbackState) {
+                    PlaybackState.PLAYING -> Icons.Default.Pause
+                    PlaybackState.PAUSED -> Icons.Default.PlayArrow
+                    PlaybackState.FINISHED -> Icons.Default.Replay
+                }
+                ControlButton(icon = controlIcon, onClick = { viewModel.togglePauseResume() })
             }
         }
     }
@@ -491,18 +499,49 @@ fun ModelSelectionScreen(viewModel: MainViewModel, navController: NavHostControl
 }
 
 @Composable
-fun AboutScreen() {
+fun AboutScreen(navController: NavHostController) {
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text("AIMalb", style = MaterialTheme.typography.titleMedium)
-        Text("v1.0.7-beta (Build 50)", style = MaterialTheme.typography.bodySmall)
+        Text("v1.2.6-beta (Build 66)", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
         Text("AI Assistant for Wear OS", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
-        Text("github.com/Malboron/AIMalbWearOS", color = Color.Cyan, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Text(
+            text = "github.com/Malboron/AIMalbWearOS", 
+            color = Color.Cyan, 
+            fontSize = 10.sp, 
+            textAlign = TextAlign.Center,
+            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+            modifier = Modifier.clickable { navController.navigate(Routes.QR_CODE) }
+        )
+    }
+}
+
+/**
+ * v1.2.5: Полноэкранный QR-код без кнопок.
+ */
+@Composable
+fun QRCodeScreen() {
+    val qrBitmap = remember { 
+        QRCodeHelper.generateQRCode("https://github.com/Malboron/AIMalbWearOS", 300) 
+    }
+    
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("GitHub Repository", fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            Image(
+                bitmap = qrBitmap.asImageBitmap(), 
+                contentDescription = "QR Code",
+                modifier = Modifier.size(160.dp).background(Color.White).padding(8.dp)
+            )
+        }
     }
 }
 
@@ -528,7 +567,7 @@ fun SimpleInputField(value: String, onValueChange: (String) -> Unit, placeholder
 fun MicButton(onClick: () -> Unit, size: androidx.compose.ui.unit.Dp, icon: ImageVector) {
     Button(onClick = onClick, modifier = Modifier.size(size), contentPadding = PaddingValues(0.dp)) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = "Microphone", modifier = Modifier.size(size * 0.55f))
+            Icon(imageVector = icon, contentDescription = "Микрофон", modifier = Modifier.size(size * 0.55f))
         }
     }
 }
@@ -537,7 +576,7 @@ fun MicButton(onClick: () -> Unit, size: androidx.compose.ui.unit.Dp, icon: Imag
 fun ControlButton(icon: ImageVector, onClick: () -> Unit) {
     Button(onClick = onClick, modifier = Modifier.size(48.dp), contentPadding = PaddingValues(0.dp)) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = "Control", modifier = Modifier.size(26.dp))
+            Icon(imageVector = icon, contentDescription = "Управление", modifier = Modifier.size(26.dp))
         }
     }
 }

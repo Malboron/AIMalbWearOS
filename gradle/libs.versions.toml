@@ -53,6 +53,7 @@ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", vers
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 material3 = { group = "androidx.compose.material3", name = "material3" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version = "1.9.0" }
+zxing-core = { group = "com.google.zxing", name = "core", version = "3.5.3" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

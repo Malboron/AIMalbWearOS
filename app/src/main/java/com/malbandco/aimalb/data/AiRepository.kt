@@ -10,6 +10,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.regex.Pattern
 
+/**
+ * Репозиторий данных: объединяет логику запросов к ИИ и внешним источникам данных.
+ */
 class AiRepository(
     private val context: Context,
     private val groqApi: GroqApi,
@@ -18,6 +21,10 @@ class AiRepository(
     private val ddgLiteUrl = "https://lite.duckduckgo.com/lite/"
     private val cbrUrl = "https://www.cbr-xml-daily.ru/daily_json.js"
 
+    /**
+     * Получить полный ответ от чата. 
+     * Включает в себя автоматический поиск курсов валют и информации в сети.
+     */
     suspend fun getChatCompletion(
         userText: String,
         apiKey: String,
@@ -29,6 +36,7 @@ class AiRepository(
         val lowerText = userText.lowercase()
         var searchContext = ""
 
+        // 1. Проверка необходимости запроса курса валют ЦБ РФ
         if (lowerText.contains("курс") || lowerText.contains("доллар") || lowerText.contains("евро") || lowerText.contains("руб")) {
             onStatusUpdate("Запрос курса ЦБ РФ...")
             val currencyData = fetchCurrencyData()
@@ -38,6 +46,7 @@ class AiRepository(
             }
         }
 
+        // 2. Если контекст еще пуст, выполняем поиск в DuckDuckGo
         if (searchContext.isEmpty()) {
             onStatusUpdate("Поиск в сети...")
             val searchData = performDDGSearch(userText)
@@ -49,6 +58,7 @@ class AiRepository(
             }
         }
 
+        // 3. Формирование системного промпта с текущей датой
         val now = LocalDateTime.now()
         val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy, HH:mm", Locale("ru"))
         val dateString = now.format(formatter)
@@ -68,6 +78,7 @@ class AiRepository(
 
         val authHeader = if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
 
+        // 4. Финальный запрос к LLM через Groq API
         try {
             val response = groqApi.getChatCompletion(
                 authHeader,
@@ -94,6 +105,9 @@ class AiRepository(
         }
     }
 
+    /**
+     * Получение курсов валют в формате JSON и парсинг регулярными выражениями.
+     */
     private suspend fun fetchCurrencyData(): String? {
         return try {
             val response = searxngApi.getRawJson(cbrUrl)
@@ -120,6 +134,9 @@ class AiRepository(
         } else "Нет данных"
     }
 
+    /**
+     * Выполнение поиска через HTML-версию DuckDuckGo Lite (быстрее и легче для парсинга).
+     */
     private suspend fun performDDGSearch(query: String): String? {
         return try {
             val responseBody = searxngApi.searchHtml(url = ddgLiteUrl, query = query)
@@ -131,6 +148,9 @@ class AiRepository(
         }
     }
 
+    /**
+     * Извлечение заголовков и сниппетов из HTML разметки поисковой выдачи.
+     */
     private fun extractDetailedTextFromDDG(html: String): String? {
         val results = mutableListOf<String>()
         val rowPattern = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.DOTALL)

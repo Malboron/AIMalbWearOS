@@ -2,28 +2,12 @@ package com.malbandco.phonecompanionmodule.data.local
 
 import android.content.Context
 
+/**
+ * Менеджер настроек компаньона. 
+ * v1.2.6: Полная синхронизация промпта и чистка.
+ */
 class CompanionPrefs(context: Context) {
     private val prefs = context.getSharedPreferences("companion_prefs", Context.MODE_PRIVATE)
-
-    var proxyHost: String
-        get() = prefs.getString("proxy_host", "") ?: ""
-        set(value) = prefs.edit().putString("proxy_host", value).apply()
-
-    var proxyPort: String
-        get() = prefs.getString("proxy_port", "") ?: ""
-        set(value) = prefs.edit().putString("proxy_port", value).apply()
-
-    var proxyUser: String
-        get() = prefs.getString("proxy_user", "") ?: ""
-        set(value) = prefs.edit().putString("proxy_user", value).apply()
-
-    var proxyPass: String
-        get() = prefs.getString("proxy_pass", "") ?: ""
-        set(value) = prefs.edit().putString("proxy_pass", value).apply()
-
-    var useDoH: Boolean
-        get() = prefs.getBoolean("use_doh", true)
-        set(value) = prefs.edit().putBoolean("use_doh", value).apply()
 
     var systemPrompt: String
         get() = prefs.getString("system_prompt", DEFAULT_PROMPT) ?: DEFAULT_PROMPT
@@ -34,6 +18,22 @@ class CompanionPrefs(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_PROMPT = "Ты — эксперт-ассистент AIMalb. Сегодня: %s. ТВОЯ ГЛАВНАЯ ЦЕЛЬ: Выдавать информацию максимально эффективно для экрана часов."
+        val DEFAULT_PROMPT = """
+            Ты — эксперт-ассистент AIMalb. Сегодня: %s.
+            ТВОЯ ГЛАВНАЯ ЦЕЛЬ: Выдавать информацию максимально эффективно для экрана часов.
+
+            ПРАВИЛА ФОРМАТА:
+            1. ПИШИ ТОЛЬКО ТЕКСТОМ. Полный запрет на Markdown: никаких звездочек (**), решеток (#), списков через тире или точки.
+            2. ЗАПРЕЩЕНЫ любые спецсимволы и кавычки.
+            3. ПЕРЕНОСЫ СТРОК: Обязательно ставь \n после каждого номера шага (например, "Шаг 1:\nТекст"). Это критично.
+            4. ЦИФРЫ И ВЕЛИЧИНЫ: Используй ЦИФРЫ для всех чисел. Пиши все единицы измерения ПОЛНЫМИ СЛОВАМИ. Запрещено: "м", "кг", "°", "$". Пиши: "78 рублей 47 копеек", "25 градусов", "10 метров". 
+            5. ДРОБИ: Никогда не используй точку для десятичных дробей. Пиши словами: "101 рубль 23 копейки" или "1 целая 5 десятых метра". 
+
+            ПРАВИЛА ЛОГИКИ:
+            1. ФАКТЫ: Тебе ЗАПРЕЩЕНО использовать свою память для цифр, курсов, погоды или событий.
+            2. Если в предоставленном контексте НЕТ ответа на вопрос — отвечай: "Нет данных".
+            3. КРАТКОСТЬ: Если вопрос — факт, отвечай только значением.
+            4. Если нужна инструкция — давай краткий пошаговый план.
+        """.trimIndent()
     }
 }
