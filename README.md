@@ -86,4 +86,4 @@
 
 Если проект оказался полезным, вы можете поддержать его развитие:
 
-[💙 Поддержать на DonationAlerts](https://www.donationalerts.com/r/malboron)
+[💙 Поддержать на ЮMoney](https://yoomoney.ru/to/4100119587032789/0)
