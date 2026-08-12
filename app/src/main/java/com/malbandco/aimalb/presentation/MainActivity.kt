@@ -517,7 +517,7 @@ fun PromptEditorScreen(viewModel: MainViewModel, navController: NavHostControlle
 
 @Composable
 fun ModelSelectionScreen(viewModel: MainViewModel, navController: NavHostController) {
-    val models = viewModel.availableModels
+    val models = viewModel.availableModels.value
     val current = viewModel.getModel()
     
     ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -547,7 +547,7 @@ fun AboutScreen(navController: NavHostController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("AIMalb", style = MaterialTheme.typography.titleMedium)
-        Text("v1.4.4-beta (Build 92)", style = MaterialTheme.typography.bodySmall)
+        Text("v1.5.0-beta (Build 95)", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.ai_assistant_desc), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))

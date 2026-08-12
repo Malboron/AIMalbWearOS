@@ -15,7 +15,7 @@ interface GroqApi {
     @GET("openai/v1/models")
     suspend fun getModels(
         @Header("Authorization") apiKey: String
-    ): okhttp3.ResponseBody
+    ): GroqModelsResponse
 }
 
 data class GroqRequest(
@@ -35,4 +35,14 @@ data class GroqResponse(
 
 data class Choice(
     val message: Message
+)
+
+data class GroqModelsResponse(
+    val data: List<GroqModel>
+)
+
+data class GroqModel(
+    val id: String,
+    val owned_by: String,
+    val active: Boolean
 )

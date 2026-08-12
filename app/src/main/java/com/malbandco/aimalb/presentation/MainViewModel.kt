@@ -88,13 +88,13 @@ class MainViewModel : ViewModel() {
     private var preferencesManager: PreferencesManager? = null
     private var hasAutoListened = false
 
-    val availableModels = listOf(
+    private val _availableModels = mutableStateOf<List<String>>(listOf(
         "openai/gpt-oss-120b",
-        "openai/gpt-oss-20b",
         "llama-3.3-70b-versatile",
         "llama-3.1-8b-instant",
         "mixtral-8x22b-instruct"
-    )
+    ))
+    val availableModels: State<List<String>> = _availableModels
 
     fun init(context: Context) {
         if (preferencesManager == null) {
@@ -154,6 +154,9 @@ class MainViewModel : ViewModel() {
                 groqApi = groqRetrofit.create(GroqApi::class.java),
                 searxngApi = searxngRetrofit.create(SearxngApi::class.java)
             )
+            
+            // Загружаем список моделей при старте
+            refreshModels()
         }
     }
 
@@ -168,6 +171,24 @@ class MainViewModel : ViewModel() {
     fun setAutoListen(value: Boolean) { preferencesManager?.autoListenOnOpen = value }
     fun getAppLanguage() = preferencesManager?.appLanguage ?: "system"
     fun setAppLanguage(value: String) { preferencesManager?.appLanguage = value }
+
+    fun refreshModels() {
+        val key = getApiKey()
+        if (key.isBlank()) return
+        
+        viewModelScope.launch {
+            repository.getAvailableModels(key).onSuccess { models ->
+                if (models.isNotEmpty()) {
+                    _availableModels.value = models
+                    // Если текущая модель больше не доступна, сбрасываем на первую из списка
+                    val current = getModel()
+                    if (current !in models) {
+                        setModel(models.first())
+                    }
+                }
+            }
+        }
+    }
 
     fun triggerAutoListenIfNeeded() {
         if (!hasAutoListened && getAutoListen()) {
@@ -196,7 +217,10 @@ class MainViewModel : ViewModel() {
         _verificationStatus.value = VerificationStatus.Verifying
         viewModelScope.launch {
             repository.verifyApiKey(key).fold(
-                onSuccess = { _verificationStatus.value = VerificationStatus.Success },
+                onSuccess = { 
+                    _verificationStatus.value = VerificationStatus.Success
+                    refreshModels() // Обновляем модели после успешной проверки ключа
+                },
                 onFailure = { _verificationStatus.value = VerificationStatus.Error("Fail") }
             )
         }
@@ -243,6 +267,10 @@ class MainViewModel : ViewModel() {
         phraseOffsets = result.second
         _visiblePhrases.value = allPhrases
         _currentIndex.intValue = 0
+        
+        // v1.4.5: Set PLAYING state immediately so the Pause button appears instantly
+        _playbackState.value = PlaybackState.PLAYING
+        
         ttsManager?.speak(sanitizedText)
     }
 

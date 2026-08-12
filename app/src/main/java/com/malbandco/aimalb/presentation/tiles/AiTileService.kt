@@ -27,14 +27,14 @@ import com.malbandco.aimalb.presentation.MainActivity
  */
 class AiTileService : TileService() {
     
-    private val ID_IMAGE_LOGO = "app_logo"
+    private val ID_IMAGE_MIC = "mic_icon"
 
     override fun onTileRequest(requestParams: RequestBuilders.TileRequest): ListenableFuture<TileBuilders.Tile> {
         val future = ResolvableFuture.create<TileBuilders.Tile>()
         val deviceParams = requestParams.deviceConfiguration
         
         val tile = TileBuilders.Tile.Builder()
-            .setResourcesVersion("92")
+            .setResourcesVersion("94")
             .setTileTimeline(
                 TimelineBuilders.Timeline.fromLayoutElement(
                     layout(this, deviceParams)
@@ -49,10 +49,10 @@ class AiTileService : TileService() {
         val future = ResolvableFuture.create<ResourceBuilders.Resources>()
         
         val resources = ResourceBuilders.Resources.Builder()
-            .setVersion("92")
-            .addIdToImageMapping(ID_IMAGE_LOGO, ResourceBuilders.ImageResource.Builder()
+            .setVersion("94")
+            .addIdToImageMapping(ID_IMAGE_MIC, ResourceBuilders.ImageResource.Builder()
                 .setAndroidResourceByResId(ResourceBuilders.AndroidImageResourceByResId.Builder()
-                    .setResourceId(R.drawable.ic_aimalb_logo)
+                    .setResourceId(R.drawable.ic_mic_tile)
                     .build())
                 .build())
             .build()
@@ -68,14 +68,14 @@ class AiTileService : TileService() {
         PrimaryLayout.Builder(deviceParams)
             .setResponsiveContentInsetEnabled(true)
             .setContent(
-                // Официальная материальная кнопка - гарантирует наличие области клика
+                // v1.4.6: Используем чистую иконку микрофона без кольца логотипа
                 Button.Builder(context, clickAction(context))
-                    .setIconContent(ID_IMAGE_LOGO)
+                    .setIconContent(ID_IMAGE_MIC)
                     .setButtonColors(ButtonColors(
                         ColorBuilders.argb(0xFF000000.toInt()), // Фон черный
-                        ColorBuilders.argb(0xFF00E5FF.toInt())  // Иконка голубая
+                        ColorBuilders.argb(0xFF00E5FF.toInt())  // Микрофон голубой
                     ))
-                    .setSize(80f)
+                    .setSize(120f)
                     .build()
             )
             .build()

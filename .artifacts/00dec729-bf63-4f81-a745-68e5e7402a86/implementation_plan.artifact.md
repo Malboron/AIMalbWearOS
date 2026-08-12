@@ -1,38 +1,39 @@
-# Final Verified Implementation Plan - Tile & Naming v1.4.4
+# Implementation Plan - Dynamic AI Model List (v1.5.0)
 
-This plan provides a triple-checked, definitive fix for the Wear OS Tile and enforces strict versioned naming for the application. All technical requirements have been cross-referenced with modern Wear OS 3.5/4.0 specifications.
-
-## Proposed Changes
-
-### 1. Watch App: System-Level Fixes (Manifest)
-
-#### [MODIFY] [AndroidManifest.xml](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/AndroidManifest.xml)
-- **Security Permission**: Change `android.permission.BIND_TILE_PROVIDER` to **`com.google.android.wearable.permission.BIND_TILE_PROVIDER`**.
-- **Intent Filter**: Ensure `MainActivity` has an `<intent-filter>` with `android.intent.action.VIEW` and `android.intent.category.DEFAULT`.
-- **Reason**: These two changes are mandatory for modern Wear OS to authorize a Tile to launch an Activity.
-
-### 2. Watch App: Optimized Tile Interaction
-
-#### [MODIFY] [AiTileService.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/tiles/AiTileService.kt)
-- **Pattern**: Use standard `materialScope` and `primaryLayout`.
-- **Trigger**: Use `ActionBuilders.launchAction(ComponentName(this, MainActivity::class.java))` for foolproof activity resolution.
-- **Visuals**: A large centered Material `Button` with the cyan microphone icon.
-
-### 3. Build Configuration (Strict Naming)
-
-#### [MODIFY] [app/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/build.gradle.kts)
-- **Versioning**: Update `versionCode = 92`, `versionName = "1.4.4-beta"`.
-- **Naming**: Set `base { archivesName.set("AIMalb1.4.4-beta") }` permanently. No conditional logic for Android Studio is included.
-
-#### [MODIFY] [MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainActivity.kt)
-- Update "About" screen to display **`v1.4.4-beta (Build 92)`**.
+This plan implements dynamic fetching of available AI models from the Groq API, replacing the hardcoded list in the application.
 
 ## User Review Required
 
-> [!CAUTION]
-> **Complete Reset**: You **must uninstall** the previous version from your watch. Manifest permission changes are system-level events that Android only registers during a clean installation.
+> [!IMPORTANT]
+> **API Key Requirement**: The list of models will only be fetched after a valid API key is provided. The app will attempt to refresh the list on initialization and when the API key is verified.
+
+## Proposed Changes
+
+### 1. Data Layer: API Definition
+
+#### [MODIFY] [GroqApi.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/remote/GroqApi.kt)
+- Define `GroqModelsResponse` and `GroqModel` data classes.
+- Update `getModels` to return `GroqModelsResponse` instead of `ResponseBody`.
+
+#### [MODIFY] [AiRepository.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/AiRepository.kt)
+- Add `getAvailableModels(apiKey: String): Result<List<String>>` method to fetch and parse the model IDs.
+
+### 2. Presentation Layer: ViewModel Integration
+
+#### [MODIFY] [MainViewModel.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainViewModel.kt)
+- Change `availableModels` from a hardcoded `List<String>` to a `State<List<String>>`.
+- Add `refreshModels()` method to call the repository.
+- Call `refreshModels()` during `init()` and after successful API key verification.
+- Ensure the current selected model is preserved if it's still available in the new list, otherwise fallback to a default.
+
+### 3. Build & Versioning
+- Increment version to **`v1.5.0-beta`** (Build **`95`**).
+- Maintain release naming convention.
 
 ## Verification Plan
-1.  **APK Name**: Confirm the release folder contains `AIMalb1.4.4-beta-release.apk`.
-2.  **Interaction**: Tap the Tile on a real watch. Confirm the app opens instantly.
-3.  **Identity**: Confirm Build 92 is shown in the settings.
+
+### Manual Verification
+1.  **Initialization**: Open the app with an existing API key. Verify that the model list in settings is populated dynamically.
+2.  **Key Verification**: Enter a new API key and tap "Verify." Confirm the model list updates upon success.
+3.  **Model Selection**: Change the model from the dynamic list and verify it is saved and used for subsequent chat requests.
+4.  **Error Handling**: Verify that if the API request fails (e.g., no internet), the app falls back to a safe default list or shows an informative message.

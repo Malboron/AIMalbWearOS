@@ -7,7 +7,7 @@ plugins {
 // Standard naming is removed to satisfy "no IDE fixes" requirement.
 // Фиксированное имя архива. 
 base {
-    archivesName.set("AIMalb1.4.4-beta")
+    archivesName.set("AIMalb1.4.6-beta")
 }
 
 android {
@@ -18,8 +18,8 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 30
         targetSdk = 36
-        versionCode = 92
-        versionName = "1.4.4-beta"
+        versionCode = 95
+        versionName = "1.5.0-beta"
     }
 
     signingConfigs {
