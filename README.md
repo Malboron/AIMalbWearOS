@@ -18,11 +18,11 @@
 ## 🛠 Установка
 
 ### 1. Часы (Wear OS)
-1. Скачайте последний билд: [AIMalb1.2.6-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.2.6-beta/AIMalb1.2.6-beta-release.apk)
+1. Скачайте последний билд: [AIMalb1.2.6-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.4.4-beta/AIMalb1.4.4-beta-release.apk) 
 2. Установите его через ADB или любой установщик APK для Wear OS.
 
 ### 2. Смартфон (Companion)
-1. Скачайте: [AIMalbCompanion1.0.9-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.2.6-beta/AIMalbCompanion1.0.9-beta-release.apk)
+1. Скачайте: [AIMalbCompanion1.0.9-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.4.4-beta/AIMalbCompanion1.1.1-beta-release.apk)
 2. Установите на телефон для удобного ввода настроек.
 
 ---
@@ -53,7 +53,6 @@
 * Retrofit
 * Kotlin Coroutines
 * Groq API
-* SearXNG API
 
 ## Архитектура
 
