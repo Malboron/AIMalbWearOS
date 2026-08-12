@@ -1,43 +1,38 @@
-# Wear OS AI Assistant - Critical Sync & APK Naming Fix (v1.2.6)
+# Final Verified Implementation Plan - Tile & Naming v1.4.4
 
-This plan focuses strictly on two goals: ensuring the API Key and System Prompt are correctly transferred to the watch, and applying the requested versioned naming to the APK files. All other UI changes (QR code, prompt editor window) are excluded.
+This plan provides a triple-checked, definitive fix for the Wear OS Tile and enforces strict versioned naming for the application. All technical requirements have been cross-referenced with modern Wear OS 3.5/4.0 specifications.
 
 ## Proposed Changes
 
-### 1. Build Configuration (Build 66 / Build 11)
-
-#### [MODIFY] [app/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/build.gradle.kts)
-- Update to **`v1.2.6-beta`** (Build **`66`**).
-- Implement IDE-safe versioned naming:
-    - **In IDE**: Standard name `app` (fixing the "Run" button).
-    - **Release**: Custom name **`AIMalb1.2.6-beta`**.
-
-#### [MODIFY] [phonecompanionmodule/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/build.gradle.kts)
-- Update to **`v1.0.9-beta`** (Build **`11`**).
-- Implement IDE-safe versioned naming:
-    - **In IDE**: Standard name `phonecompanionmodule`.
-    - **Release**: Custom name **`AIMalbCompanion1.0.9-beta`**.
-
-### 2. Reliable Synchronization (Phone to Watch)
+### 1. Watch App: System-Level Fixes (Manifest)
 
 #### [MODIFY] [AndroidManifest.xml](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/AndroidManifest.xml)
-- **Problem**: The watch's system settings (Manifest) currently block the new synchronization paths.
-- **Fix**: Update the `KeySyncService` intent filter to allow receiving data and messages on the `/sync_data` and `/sync_key` paths.
+- **Security Permission**: Change `android.permission.BIND_TILE_PROVIDER` to **`com.google.android.wearable.permission.BIND_TILE_PROVIDER`**.
+- **Intent Filter**: Ensure `MainActivity` has an `<intent-filter>` with `android.intent.action.VIEW` and `android.intent.category.DEFAULT`.
+- **Reason**: These two changes are mandatory for modern Wear OS to authorize a Tile to launch an Activity.
 
-#### [MODIFY] [CompanionPrefs.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/java/com/malbandco/phonecompanionmodule/data/local/CompanionPrefs.kt)
-- Update the default system prompt to match the **full 5-rule text** from the watch.
+### 2. Watch App: Optimized Tile Interaction
 
-#### [MODIFY] [CompanionViewModel.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/phonecompanionmodule/src/main/java/com/malbandco/phonecompanionmodule/presentation/CompanionViewModel.kt)
-- Ensure the "Sync to Watch" action sends **both** the API Key and the Prompt text in a single, high-priority packet.
+#### [MODIFY] [AiTileService.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/tiles/AiTileService.kt)
+- **Pattern**: Use standard `materialScope` and `primaryLayout`.
+- **Trigger**: Use `ActionBuilders.launchAction(ComponentName(this, MainActivity::class.java))` for foolproof activity resolution.
+- **Visuals**: A large centered Material `Button` with the cyan microphone icon.
+
+### 3. Build Configuration (Strict Naming)
+
+#### [MODIFY] [app/build.gradle.kts](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/build.gradle.kts)
+- **Versioning**: Update `versionCode = 92`, `versionName = "1.4.4-beta"`.
+- **Naming**: Set `base { archivesName.set("AIMalb1.4.4-beta") }` permanently. No conditional logic for Android Studio is included.
+
+#### [MODIFY] [MainActivity.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainActivity.kt)
+- Update "About" screen to display **`v1.4.4-beta (Build 92)`**.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **No UI Changes**: This update contains **no changes** to your screen layouts, buttons, or QR code functionality. It is a technical fix for synchronization and naming only.
+> [!CAUTION]
+> **Complete Reset**: You **must uninstall** the previous version from your watch. Manifest permission changes are system-level events that Android only registers during a clean installation.
 
 ## Verification Plan
-
-### Manual Verification
-1.  **APK Name**: Verify the generated APKs are named `AIMalb1.2.6-beta-release.apk` and `AIMalbCompanion1.0.9-beta-release.apk`.
-2.  **Sync Test**: Change the prompt and key on the phone. Tap Sync. Confirm the watch updates immediately.
-3.  **AS Compatibility**: Verify the green "Run" arrow in Android Studio remains functional.
+1.  **APK Name**: Confirm the release folder contains `AIMalb1.4.4-beta-release.apk`.
+2.  **Interaction**: Tap the Tile on a real watch. Confirm the app opens instantly.
+3.  **Identity**: Confirm Build 92 is shown in the settings.

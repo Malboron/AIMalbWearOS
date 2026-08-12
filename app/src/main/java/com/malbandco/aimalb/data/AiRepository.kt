@@ -38,23 +38,23 @@ class AiRepository(
 
         // 1. Проверка необходимости запроса курса валют ЦБ РФ
         if (lowerText.contains("курс") || lowerText.contains("доллар") || lowerText.contains("евро") || lowerText.contains("руб")) {
-            onStatusUpdate("Запрос курса ЦБ РФ...")
+            onStatusUpdate("cbr_status")
             val currencyData = fetchCurrencyData()
             if (currencyData != null) {
                 searchContext += "\n\nКУРСЫ ВАЛЮТ ЦБ РФ:\n$currencyData"
-                onStatusUpdate("Курс получен ✅")
+                onStatusUpdate("cbr_done")
             }
         }
 
         // 2. Если контекст еще пуст, выполняем поиск в DuckDuckGo
         if (searchContext.isEmpty()) {
-            onStatusUpdate("Поиск в сети...")
+            onStatusUpdate("search_status")
             val searchData = performDDGSearch(userText)
             if (!searchData.isNullOrBlank()) {
                 searchContext += "\n\nДАННЫЕ ИЗ СЕТИ:\n$searchData"
-                onStatusUpdate("Данные получены ✅")
+                onStatusUpdate("search_done")
             } else {
-                onStatusUpdate("Поиск не дал результатов")
+                onStatusUpdate("no_results")
             }
         }
 
@@ -74,7 +74,7 @@ class AiRepository(
             Message(role = "user", content = userText + searchContext)
         )
 
-        onStatusUpdate("ИИ формирует ответ...")
+        onStatusUpdate("ai_thinking")
 
         val authHeader = if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
 
@@ -88,10 +88,10 @@ class AiRepository(
                     temperature = 0.1f
                 )
             )
-            response.choices.firstOrNull()?.message?.content ?: "Ошибка: Пустой ответ"
+            response.choices.firstOrNull()?.message?.content ?: "Empty response"
         } catch (e: Exception) {
             Log.e("AiRepository", "Groq error", e)
-            "Ошибка Groq: ${e.message}"
+            "Groq Error: ${e.message}"
         }
     }
 
@@ -125,7 +125,7 @@ class AiRepository(
         val pattern = Pattern.compile("\"$code\".*?\"Value\":\\s*(\\d+\\.?(\\d*))", Pattern.DOTALL)
         val matcher = pattern.matcher(json)
         return if (matcher.find()) {
-            val fullValue = matcher.group(1) ?: return "Нет данных"
+            val fullValue = matcher.group(1) ?: return "No data"
             val parts = fullValue.split(".")
             val whole = parts[0]
             val fractional = if (parts.size > 1) parts[1].take(2).padEnd(2, '0') else "00"

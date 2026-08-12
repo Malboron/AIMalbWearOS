@@ -45,7 +45,6 @@ sealed class VerificationStatus {
 
 /**
  * Главная ViewModel: управляет логикой, состояниями и связью между UI и данными.
- * v1.2.1: Монолитная озвучка и синхронизация по символам.
  */
 class MainViewModel : ViewModel() {
 
@@ -77,7 +76,7 @@ class MainViewModel : ViewModel() {
     val shouldTriggerVoice: State<Boolean> = _shouldTriggerVoice
 
     private var allPhrases: List<String> = emptyList()
-    private var phraseOffsets: List<Int> = emptyList() // v1.2.1: Начальные индексы символов для сегментов
+    private var phraseOffsets: List<Int> = emptyList()
     
     private var ttsManager: TtsManager? = null
     private var screenStayAwakeJob: Job? = null
@@ -107,11 +106,13 @@ class MainViewModel : ViewModel() {
                 context,
                 onCharacterReached = { charIndex ->
                     viewModelScope.launch(Dispatchers.Main) {
-                        // Находим индекс сегмента, которому принадлежит текущий символ
                         val segmentIndex = phraseOffsets.indexOfLast { it <= charIndex }
                         if (segmentIndex >= 0 && segmentIndex != _currentIndex.intValue) {
                             _currentIndex.intValue = segmentIndex
                             _playbackState.value = PlaybackState.PLAYING
+                        }
+                        if (_appState.value == AppState.LOADING && segmentIndex >= 0) {
+                            _appState.value = AppState.RESPONDING
                         }
                     }
                 },
@@ -165,8 +166,8 @@ class MainViewModel : ViewModel() {
     fun resetSystemPrompt() { preferencesManager?.resetPrompt() }
     fun getAutoListen() = preferencesManager?.autoListenOnOpen ?: false
     fun setAutoListen(value: Boolean) { preferencesManager?.autoListenOnOpen = value }
-    fun getLongPressEnabled() = preferencesManager?.longPressShortcutEnabled ?: false
-    fun setLongPressEnabled(value: Boolean) { preferencesManager?.longPressShortcutEnabled = value }
+    fun getAppLanguage() = preferencesManager?.appLanguage ?: "system"
+    fun setAppLanguage(value: String) { preferencesManager?.appLanguage = value }
 
     fun triggerAutoListenIfNeeded() {
         if (!hasAutoListened && getAutoListen()) {
@@ -177,9 +178,6 @@ class MainViewModel : ViewModel() {
 
     fun triggerVoiceManually() { _shouldTriggerVoice.value = true }
     
-    /**
-     * v1.2.3: Мгновенный запуск микрофона с экрана ответа.
-     */
     fun triggerVoiceDirectly() {
         ttsManager?.stop()
         _currentIndex.intValue = -1
@@ -192,14 +190,14 @@ class MainViewModel : ViewModel() {
     fun verifyKey() {
         val key = getApiKey()
         if (key.isBlank()) {
-            _verificationStatus.value = VerificationStatus.Error("Ключ пуст")
+            _verificationStatus.value = VerificationStatus.Error("Key empty")
             return
         }
         _verificationStatus.value = VerificationStatus.Verifying
         viewModelScope.launch {
             repository.verifyApiKey(key).fold(
                 onSuccess = { _verificationStatus.value = VerificationStatus.Success },
-                onFailure = { _verificationStatus.value = VerificationStatus.Error("Сбой") }
+                onFailure = { _verificationStatus.value = VerificationStatus.Error("Fail") }
             )
         }
     }
@@ -210,7 +208,7 @@ class MainViewModel : ViewModel() {
         _isScreenLockActive.value = true
         _appState.value = AppState.LOADING
         _responseText.value = ""
-        _statusText.value = "Старт..."
+        _statusText.value = "start_status"
         _visiblePhrases.value = emptyList()
         _currentIndex.intValue = -1
         _playbackState.value = PlaybackState.FINISHED
@@ -222,77 +220,54 @@ class MainViewModel : ViewModel() {
                     apiKey = getApiKey(),
                     model = getModel(),
                     systemPromptTemplate = getSystemPrompt()
-                ) { status -> _statusText.value = status }
+                ) { status -> 
+                    _statusText.value = status
+                }
                 startResponding(aiResponse)
             } catch (e: Exception) {
-                _responseText.value = "Ошибка: ${e.message}"
+                _responseText.value = e.message ?: "Error"
                 _appState.value = AppState.IDLE
                 startScreenTimeoutCountdown(5000)
             }
         }
     }
 
-    /**
-     * v1.2.1: Мгновенное переключение экрана и умная сегментация.
-     */
     private fun startResponding(text: String) {
         stopScreenTimeoutCountdown()
         _isScreenLockActive.value = true
-        
+        _statusText.value = "loading_voice"
         val sanitizedText = text.replace("\\n", "\n").replace("/n", "\n")
         _responseText.value = sanitizedText
-        
-        // Умная сегментация (12-40 символов)
         val result = smartSplit(sanitizedText)
         allPhrases = result.first
         phraseOffsets = result.second
-        
         _visiblePhrases.value = allPhrases
         _currentIndex.intValue = 0
-        
-        // Мгновенно переходим к ответу
-        _appState.value = AppState.RESPONDING
-        
-        // Запуск монолитного голоса
         ttsManager?.speak(sanitizedText)
     }
 
-    /**
-     * Алгоритм разбиения текста на сегменты.
-     * v1.2.2: Приоритет - одно предложение на строку (лимит 15-45 символов).
-     */
     private fun smartSplit(text: String): Pair<List<String>, List<Int>> {
         val segments = mutableListOf<String>()
         val offsets = mutableListOf<Int>()
-        
-        // Разделяем по знакам препинания (предложениям) и переносам строк
         val rawSentences = text.split(Regex("(?<=[.!?])\\s+|\\n")).filter { it.isNotBlank() }
         var lastSearchIndex = 0
-
         for (sentence in rawSentences) {
             val sTrim = sentence.trim()
             val startIdx = text.indexOf(sTrim, lastSearchIndex)
             if (startIdx == -1) continue
             lastSearchIndex = startIdx + sTrim.length
-
             if (sTrim.length <= 45) {
-                // Одно предложение на строку - это приоритет (даже если оно короче 15)
                 segments.add(sTrim)
                 offsets.add(startIdx)
             } else {
-                // Если предложение слишком длинное (> 45), делим его по словам
                 val words = sTrim.split(" ")
                 var currentChunk = StringBuilder()
                 var currentChunkOffset = startIdx
-
                 for (word in words) {
                     val wordToAppend = if (currentChunk.isEmpty()) word else " $word"
-                    
                     if (currentChunk.length + wordToAppend.length > 45 && currentChunk.isNotEmpty()) {
                         segments.add(currentChunk.toString())
                         offsets.add(currentChunkOffset)
-                        
-                        // Смещение для следующего куска внутри того же предложения
                         val nextWordIdx = text.indexOf(word, currentChunkOffset + 1)
                         currentChunk = StringBuilder(word)
                         currentChunkOffset = if (nextWordIdx != -1) nextWordIdx else currentChunkOffset

@@ -29,7 +29,7 @@ sealed class SyncStatus {
 
 /**
  * ViewModel компаньона.
- * v1.2.4: Удалена логика прокси и DNS, поддержка полного промпта.
+ * v1.2.6: Удалена логика прокси и DNS, поддержка полного промпта и локализации.
  */
 class CompanionViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -61,9 +61,12 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
     fun setSystemPrompt(v: String) { prefs.systemPrompt = v }
     fun resetSystemPrompt() { prefs.resetPrompt() }
 
+    fun getAppLanguage() = prefs.appLanguage
+    fun setAppLanguage(v: String) { prefs.appLanguage = v }
+
     fun verifyKey(key: String) {
         if (key.isBlank()) {
-            _syncStatus.value = SyncStatus.Error("Ключ пуст")
+            _syncStatus.value = SyncStatus.Error("Key empty")
             return
         }
 
@@ -75,7 +78,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 _syncStatus.value = SyncStatus.Success
             } catch (e: Exception) {
                 Log.e("CompanionVM", "Verification failed", e)
-                _syncStatus.value = SyncStatus.Error("Ошибка проверки: ${e.message}")
+                _syncStatus.value = SyncStatus.Error("Fail: ${e.message}")
             }
         }
     }
@@ -85,7 +88,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun syncToWatch(key: String) {
         if (key.isBlank()) {
-            _syncStatus.value = SyncStatus.Error("Ключ пуст")
+            _syncStatus.value = SyncStatus.Error("Key empty")
             return
         }
         
@@ -97,7 +100,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 val nodeClient = Wearable.getNodeClient(getApplication<Application>())
                 val currentPrompt = prefs.systemPrompt
 
-                // 1. Data Layer Sync (Для сохранности при перезагрузке)
+                // 1. Data Layer Sync
                 val putDataReq = PutDataMapRequest.create("/sync_data").apply {
                     dataMap.putString("key", key)
                     dataMap.putString("prompt", currentPrompt)
@@ -106,7 +109,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 putDataReq.setUrgent()
                 dataClient.putDataItem(putDataReq).await()
 
-                // 2. Message API Sync (Для мгновенного обновления без задержек)
+                // 2. Message API Sync
                 val nodes = nodeClient.connectedNodes.await()
                 nodes.forEach { node ->
                     messageClient.sendMessage(node.id, "/sync_key", key.toByteArray()).await()
@@ -116,7 +119,7 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
                 _syncStatus.value = SyncStatus.Success
             } catch (e: Exception) {
                 Log.e("CompanionVM", "Sync failed", e)
-                _syncStatus.value = SyncStatus.Error("Сбой синхронизации: ${e.message}")
+                _syncStatus.value = SyncStatus.Error("Sync failed: ${e.message}")
             }
         }
     }

@@ -59,9 +59,9 @@ class PreferencesManager(context: Context) {
         get() = prefs.getBoolean("auto_listen", false)
         set(value) = prefs.edit().putBoolean("auto_listen", value).apply()
 
-    var longPressShortcutEnabled: Boolean
-        get() = prefs.getBoolean("long_press_shortcut", false)
-        set(value) = prefs.edit().putBoolean("long_press_shortcut", value).apply()
+    var appLanguage: String
+        get() = prefs.getString("app_language", "system") ?: "system"
+        set(value) = prefs.edit().putString("app_language", value).apply()
 
     /**
      * Возврат системного промпта к заводским настройкам.

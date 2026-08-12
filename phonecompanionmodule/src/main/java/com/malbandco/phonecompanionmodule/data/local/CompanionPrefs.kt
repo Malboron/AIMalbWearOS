@@ -4,10 +4,14 @@ import android.content.Context
 
 /**
  * Менеджер настроек компаньона. 
- * v1.2.6: Полная синхронизация промпта и чистка.
+ * v1.2.5: Синхронизирован ПОЛНЫЙ промпт.
  */
 class CompanionPrefs(context: Context) {
     private val prefs = context.getSharedPreferences("companion_prefs", Context.MODE_PRIVATE)
+
+    var appLanguage: String
+        get() = prefs.getString("app_language", "system") ?: "system"
+        set(value) = prefs.edit().putString("app_language", value).apply()
 
     var systemPrompt: String
         get() = prefs.getString("system_prompt", DEFAULT_PROMPT) ?: DEFAULT_PROMPT

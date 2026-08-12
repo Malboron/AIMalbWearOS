@@ -1,3 +1,25 @@
 <resources>
-    <string name="app_name">AIMalb Companion</string>
+    <string name="app_name">AIMalb</string>
+    <string name="companion_app">Companion App</string>
+    <string name="groq_key_hint">Groq API Key</string>
+    <string name="show_key">Show Key</string>
+    <string name="verify_key">Verify Key</string>
+    <string name="sync_to_watch">Sync to Watch</string>
+    <string name="edit_sys_prompt">Edit System Prompt</string>
+    <string name="language_label">Language</string>
+    <string name="lang_system">System Default</string>
+    <string name="lang_ru">Russian</string>
+    <string name="lang_en">English</string>
+    <string name="sync_success">Done! ✅</string>
+    <string name="sync_failed">Sync failed: %1$s</string>
+    <string name="verifying_key">Verifying key...</string>
+    <string name="verifying_failed">Verification failed: %1$s</string>
+    <string name="verifying_success">Verification success ✅</string>
+    <string name="key_empty">Key is empty</string>
+    <string name="prompt_editor_title">System Prompt Editor</string>
+    <string name="reset_default">Reset Default</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="syncing_data">Syncing to watch...</string>
+    <string name="prompt_hint">Prompt Text</string>
 </resources>

@@ -3,6 +3,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// v1.4.2: Strict versioned naming for all builds. 
+// Standard naming is removed to satisfy "no IDE fixes" requirement.
+// Фиксированное имя архива. 
+base {
+    archivesName.set("AIMalb1.4.4-beta")
+}
+
 android {
     namespace = "com.malbandco.aimalb"
     compileSdk = 36
@@ -11,8 +18,8 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 30
         targetSdk = 36
-        versionCode = 66
-        versionName = "1.2.6-beta"
+        versionCode = 92
+        versionName = "1.4.4-beta"
     }
 
     signingConfigs {
@@ -43,12 +50,6 @@ android {
     }
 }
 
-// Fixed naming: Versioned name for all builds. 
-// Note: If this breaks Android Studio "Run", the user will need to adjust deployment settings.
-base {
-    archivesName.set("AIMalb1.2.6-beta")
-}
-
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.activity.compose)
@@ -70,6 +71,10 @@ dependencies {
     implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.security.crypto)
     implementation(libs.zxing.core)
+    implementation(libs.wear.tiles)
+    implementation(libs.wear.protolayout)
+    implementation(libs.wear.protolayout.material)
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.test.manifest)

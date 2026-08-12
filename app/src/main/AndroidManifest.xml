@@ -20,14 +20,11 @@
             android:name="wear-sdk"
             android:required="false" />
 
-        <!--
-               Set to true if your app is Standalone, that is, it does not require the handheld
-               app to run.
-        -->
         <meta-data
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <!-- Служба синхронизации ключа и промпта -->
         <service
             android:name=".data.local.KeySyncService"
             android:exported="true">
@@ -38,18 +35,7 @@
             </intent-filter>
         </service>
 
-        <service
-            android:name=".data.local.ButtonInterceptorService"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
-
+        <!-- Главное окно приложения -->
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
@@ -57,10 +43,31 @@
             android:theme="@style/MainActivityTheme.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- v1.4.4: Разрешаем запуск из плиток (Tiles) по стандарту ACTION_VIEW -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="aimalb" android:host="launch" />
+            </intent-filter>
         </activity>
+
+        <!-- Служба плитки (виджета) -->
+        <service
+            android:name=".presentation.tiles.AiTileService"
+            android:exported="true"
+            android:label="AIMalb Assistant"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@drawable/ic_aimalb_logo" />
+        </service>
     </application>
 
 </manifest>

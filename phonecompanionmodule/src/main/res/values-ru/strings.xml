@@ -1,0 +1,25 @@
+<resources>
+    <string name="app_name">AIMalb</string>
+    <string name="companion_app">Компаньон</string>
+    <string name="groq_key_hint">Ключ Groq API</string>
+    <string name="show_key">Показать ключ</string>
+    <string name="verify_key">Проверить ключ</string>
+    <string name="sync_to_watch">Синхронизация</string>
+    <string name="edit_sys_prompt">Системный промпт</string>
+    <string name="language_label">Язык</string>
+    <string name="lang_system">Системный</string>
+    <string name="lang_ru">Русский</string>
+    <string name="lang_en">English</string>
+    <string name="sync_success">Готово! ✅</string>
+    <string name="sync_failed">Сбой синхронизации: %1$s</string>
+    <string name="verifying_key">Проверка ключа...</string>
+    <string name="verifying_failed">Ошибка проверки: %1$s</string>
+    <string name="verifying_success">Проверка пройдена ✅</string>
+    <string name="key_empty">Ключ пуст</string>
+    <string name="prompt_editor_title">Редактор промпта</string>
+    <string name="reset_default">Сбросить</string>
+    <string name="save_changes">Сохранить</string>
+    <string name="dismiss">Закрыть</string>
+    <string name="syncing_data">Синхронизация...</string>
+    <string name="prompt_hint">Текст промпта</string>
+</resources>

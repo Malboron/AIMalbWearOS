@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,7 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -36,8 +37,25 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.malbandco.phonecompanionmodule.presentation.CompanionViewModel
 import com.malbandco.phonecompanionmodule.presentation.SyncStatus
 import com.malbandco.phonecompanionmodule.ui.theme.AIMalbTheme
+import android.content.Context
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = com.malbandco.phonecompanionmodule.data.local.CompanionPrefs(newBase)
+        val context = applyLocale(newBase, prefs.appLanguage)
+        super.attachBaseContext(context)
+    }
+
+    private fun applyLocale(context: Context, language: String): Context {
+        if (language == "system") return context
+        val locale = Locale(language)
+        Locale.setDefault(locale)
+        val config = context.resources.configuration
+        config.setLocale(locale)
+        return context.createConfigurationContext(config)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -62,6 +80,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
     var showPromptEditor by remember { mutableStateOf(false) }
     val syncStatus = viewModel.syncStatus.value
     val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
 
     val neonCyan = Color(0xFF00E5FF)
 
@@ -83,8 +102,8 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                         .statusBarsPadding()
                 ) {
                     Text(
-                        "System Prompt Editor",
-                        fontSize = 20.sp,
+                        stringResource(R.string.prompt_editor_title),
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -94,7 +113,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                         SimpleInputField(
                             value = localPrompt, 
                             onValueChange = { localPrompt = it }, 
-                            placeholder = "Prompt Text", 
+                            placeholder = "", 
                             singleLine = false
                         )
                     }
@@ -107,7 +126,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                             viewModel.resetSystemPrompt()
                             localPrompt = viewModel.getSystemPrompt()
                         }) {
-                            Text("Reset Default", color = Color.Gray)
+                            Text(stringResource(R.string.reset_default), color = Color.Gray)
                         }
                         Button(
                             onClick = { 
@@ -116,7 +135,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = neonCyan)
                         ) {
-                            Text("Save Changes", color = Color.Black, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.save_changes), color = Color.Black, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -134,13 +153,13 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "AIMalb",
+            text = stringResource(R.string.app_name),
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White
         )
         Text(
-            text = "Companion App",
+            text = stringResource(R.string.companion_app),
             fontSize = 14.sp,
             color = neonCyan,
             modifier = Modifier.padding(bottom = 32.dp)
@@ -149,7 +168,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
         OutlinedTextField(
             value = apiKey,
             onValueChange = { apiKey = it },
-            label = { Text("Groq API Key", color = Color.Gray) },
+            label = { Text(stringResource(R.string.groq_key_hint), color = Color.Gray) },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = if (keyVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -158,7 +177,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                 IconButton(onClick = { keyVisible = !keyVisible }) {
                     Icon(
                         imageVector = if (keyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = "Показать ключ",
+                        contentDescription = stringResource(R.string.show_key),
                         tint = neonCyan
                     )
                 }
@@ -175,7 +194,6 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Actions
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = { viewModel.verifyKey(apiKey) },
@@ -183,7 +201,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                 colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray),
                 enabled = syncStatus !is SyncStatus.Verifying && syncStatus !is SyncStatus.Syncing
             ) {
-                Text("Verify Key", color = Color.White)
+                Text(stringResource(R.string.verify_key), color = Color.White)
             }
 
             Button(
@@ -192,24 +210,42 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                 colors = ButtonDefaults.buttonColors(containerColor = neonCyan),
                 enabled = syncStatus !is SyncStatus.Verifying && syncStatus !is SyncStatus.Syncing
             ) {
-                Text("Sync to Watch", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.sync_to_watch), color = Color.Black, fontWeight = FontWeight.Bold)
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // System Prompt Editor Trigger
         Button(
             onClick = { showPromptEditor = true },
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.filledTonalButtonColors()
         ) {
-            Text("Edit System Prompt", color = Color.White)
+            Text(stringResource(R.string.edit_sys_prompt), color = Color.White)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Language Selector
+        var lang by remember { mutableStateOf(viewModel.getAppLanguage()) }
+        val langOptions = listOf("system", "ru", "en")
+        val langNames = listOf(stringResource(R.string.lang_system), stringResource(R.string.lang_ru), stringResource(R.string.lang_en))
+        
+        TextButton(
+            onClick = {
+                val nextIndex = (langOptions.indexOf(lang) + 1) % langOptions.size
+                val newLang = langOptions[nextIndex]
+                viewModel.setAppLanguage(newLang)
+                lang = newLang
+                (context as? ComponentActivity)?.recreate()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("${stringResource(R.string.language_label)}: ${langNames[langOptions.indexOf(lang)]}", color = Color.Gray)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Status Feedback
         when (syncStatus) {
             SyncStatus.Idle -> {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -223,19 +259,19 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
                             uriHandler.openUri("https://github.com/Malboron/AIMalbWearOS") 
                         }
                     )
-                    Text("v1.0.9-beta (Build 11)", color = Color.DarkGray, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
+                    Text("v1.1.1-beta (Build 13)", color = Color.DarkGray, fontSize = 10.sp, modifier = Modifier.padding(top = 4.dp))
                 }
             }
             SyncStatus.Verifying -> {
                 CircularProgressIndicator(color = neonCyan, modifier = Modifier.size(24.dp))
-                Text("Verifying key...", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.verifying_key), color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             }
             SyncStatus.Syncing -> {
                 CircularProgressIndicator(color = Color.Magenta, modifier = Modifier.size(24.dp))
-                Text("Syncing to watch...", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                Text(stringResource(R.string.syncing_data), color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             }
             SyncStatus.Success -> {
-                Text("🟢 Done!", color = neonCyan, fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.sync_success), color = neonCyan, fontWeight = FontWeight.Bold)
                 LaunchedEffect(Unit) {
                     kotlinx.coroutines.delay(3000)
                     viewModel.resetStatus()
@@ -244,7 +280,7 @@ fun CompanionScreen(viewModel: CompanionViewModel = viewModel()) {
             is SyncStatus.Error -> {
                 Text("🔴 ${syncStatus.message}", color = Color.Red, fontSize = 11.sp, textAlign = TextAlign.Center)
                 TextButton(onClick = { viewModel.resetStatus() }) {
-                    Text("Dismiss", color = Color.Gray, fontSize = 10.sp)
+                    Text(stringResource(R.string.dismiss), color = Color.Gray, fontSize = 10.sp)
                 }
             }
         }

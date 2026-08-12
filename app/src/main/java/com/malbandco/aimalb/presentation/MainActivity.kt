@@ -48,12 +48,23 @@ import com.malbandco.aimalb.presentation.components.JumpingDots
 import com.malbandco.aimalb.presentation.components.QRCodeHelper
 import com.malbandco.aimalb.presentation.theme.AIMalbTheme
 import kotlin.math.abs
+import android.content.Context
+import com.malbandco.aimalb.utils.LocaleHelper
+import com.malbandco.aimalb.data.local.PreferencesManager
+import androidx.compose.ui.res.stringResource
+import com.malbandco.aimalb.R
 
 /**
  * Главная точка входа приложения. Управляет жизненным циклом и аппаратными кнопками.
  */
 class MainActivity : ComponentActivity() {
     private var mainViewModel: MainViewModel? = null
+
+    override fun attachBaseContext(newBase: Context) {
+        val prefs = PreferencesManager(newBase)
+        val context = LocaleHelper.applyLocale(newBase, prefs.appLanguage)
+        super.attachBaseContext(context)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +78,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent) // Обновляем интент для корректной обработки сигнала "trigger_voice"
         handleIntent(intent)
     }
 
@@ -95,7 +107,7 @@ object Routes {
     const val MODEL_SELECTION = "model_selection"
     const val PROMPT_EDITOR = "prompt_editor"
     const val ABOUT = "about"
-    const val QR_CODE = "qr_code" // v1.2.5
+    const val QR_CODE = "qr_code"
 }
 
 /**
@@ -109,7 +121,6 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
     val isScreenLockActive = viewModel.isScreenLockActive.value
     val shouldTriggerVoice = viewModel.shouldTriggerVoice.value
 
-    // Глобальный запуск микрофона на уровне приложения
     val voiceLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -143,6 +154,13 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
 
     LaunchedEffect(Unit) {
         viewModel.init(context)
+        // v1.3.6: Проверка интента при каждом старте/возобновлении из LaunchedEffect
+        (context as? ComponentActivity)?.intent?.let { intent ->
+            if (intent.getBooleanExtra("trigger_voice", false)) {
+                viewModel.triggerVoiceManually()
+                intent.removeExtra("trigger_voice")
+            }
+        }
     }
 
     LaunchedEffect(appState) {
@@ -231,7 +249,21 @@ fun HomeScreen(
 
 @Composable
 fun LoadingScreen(viewModel: MainViewModel) {
-    val statusText = viewModel.statusText.value
+    val statusKey = viewModel.statusText.value
+    val statusText = when (statusKey) {
+        "start_status" -> stringResource(R.string.start_status)
+        "cbr_status" -> stringResource(R.string.cbr_status)
+        "cbr_done" -> stringResource(R.string.cbr_done)
+        "search_status" -> stringResource(R.string.search_status)
+        "search_done" -> stringResource(R.string.search_done)
+        "no_results" -> stringResource(R.string.no_results)
+        "ai_thinking" -> stringResource(R.string.ai_thinking)
+        "loading_voice" -> stringResource(R.string.loading_voice)
+        "preparing_voice" -> stringResource(R.string.preparing_voice)
+        "network_fallback" -> stringResource(R.string.network_fallback)
+        else -> statusKey
+    }
+    
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -330,15 +362,15 @@ fun RespondingScreen(viewModel: MainViewModel) {
 @Composable
 fun SettingsMenuScreen(navController: NavHostController) {
     ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { Text("Настройки", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp)) }
+        item { Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp)) }
         item {
-            TitleCard(onClick = { navController.navigate(Routes.AI_SETTINGS) }, title = { Text("Настройки ИИ") }) {
-                Text("Ключ, Модель, Промпт", style = MaterialTheme.typography.bodySmall)
+            TitleCard(onClick = { navController.navigate(Routes.AI_SETTINGS) }, title = { Text(stringResource(R.string.ai_settings)) }) {
+                Text(stringResource(R.string.config_summary), style = MaterialTheme.typography.bodySmall)
             }
         }
         item {
-            TitleCard(onClick = { navController.navigate(Routes.ABOUT) }, title = { Text("О проекте") }) {
-                Text("Инфо и GitHub", style = MaterialTheme.typography.bodySmall)
+            TitleCard(onClick = { navController.navigate(Routes.ABOUT) }, title = { Text(stringResource(R.string.about)) }) {
+                Text(stringResource(R.string.about_summary), style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -349,15 +381,16 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
     var key by remember { mutableStateOf(viewModel.getApiKey()) }
     val currentModel = viewModel.getModel()
     val verificationStatus = viewModel.verificationStatus.value
+    val context = LocalContext.current
 
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 32.dp, bottom = 48.dp, start = 8.dp, end = 8.dp)
     ) {
-        item { Text("AI Config", style = MaterialTheme.typography.titleSmall) }
+        item { Text(stringResource(R.string.ai_config), style = MaterialTheme.typography.titleSmall) }
         
         item {
-            SimpleInputField(value = key, onValueChange = { key = it }, placeholder = "Groq API Key")
+            SimpleInputField(value = key, onValueChange = { key = it }, placeholder = stringResource(R.string.groq_key_hint))
         }
 
         item {
@@ -373,7 +406,7 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
                     },
                     modifier = Modifier.height(32.dp).padding(horizontal = 4.dp)
                 ) {
-                    Text("Проверить", fontSize = 10.sp)
+                    Text(stringResource(R.string.verify), fontSize = 10.sp)
                 }
                 
                 when (verificationStatus) {
@@ -390,7 +423,7 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
                 onClick = { navController.navigate(Routes.MODEL_SELECTION) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             ) {
-                Text("Модель: ${currentModel.split("/").last()}", fontSize = 12.sp)
+                Text(stringResource(R.string.model_label, currentModel.split("/").last()), fontSize = 12.sp)
             }
         }
         
@@ -400,7 +433,7 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 colors = ButtonDefaults.filledTonalButtonColors()
             ) {
-                Text("Системный промпт", fontSize = 12.sp)
+                Text(stringResource(R.string.sys_prompt), fontSize = 12.sp)
             }
         }
         
@@ -412,22 +445,30 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
                     autoListen = it
                     viewModel.setAutoListen(it) 
                 },
-                label = { Text("Слушать при запуске", fontSize = 12.sp) },
+                label = { Text(stringResource(R.string.auto_listen), fontSize = 12.sp) },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             )
         }
 
         item {
-            var longPress by remember { mutableStateOf(viewModel.getLongPressEnabled()) }
-            SwitchButton(
-                checked = longPress,
-                onCheckedChange = { 
-                    longPress = it
-                    viewModel.setLongPressEnabled(it) 
+            var lang by remember { mutableStateOf(viewModel.getAppLanguage()) }
+            val langOptions = listOf("system", "ru", "en")
+            val langNames = listOf(stringResource(R.string.lang_system), stringResource(R.string.lang_ru), stringResource(R.string.lang_en))
+            
+            Button(
+                onClick = {
+                    val nextIndex = (langOptions.indexOf(lang) + 1) % langOptions.size
+                    val newLang = langOptions[nextIndex]
+                    viewModel.setAppLanguage(newLang)
+                    lang = newLang
+                    // Restart activity to apply language immediately
+                    (context as? ComponentActivity)?.recreate()
                 },
-                label = { Text("Запуск по зажатию", fontSize = 12.sp) },
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-            )
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = ButtonDefaults.filledTonalButtonColors()
+            ) {
+                Text("${stringResource(R.string.language_label)}: ${langNames[langOptions.indexOf(lang)]}", fontSize = 12.sp)
+            }
         }
         
         item {
@@ -435,7 +476,7 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
                 Button(onClick = { 
                     viewModel.setApiKey(key)
                     navController.popBackStack()
-                }) { Text("OK", fontSize = 12.sp) }
+                }) { Text(stringResource(R.string.ok_btn), fontSize = 12.sp) }
             }
         }
     }
@@ -452,10 +493,10 @@ fun PromptEditorScreen(viewModel: MainViewModel, navController: NavHostControlle
             .padding(horizontal = 16.dp, vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("System Prompt", style = MaterialTheme.typography.titleSmall)
+        Text(stringResource(R.string.sys_prompt), style = MaterialTheme.typography.titleSmall)
         Spacer(Modifier.height(8.dp))
         
-        SimpleInputField(value = prompt, onValueChange = { prompt = it }, placeholder = "Prompt Text", singleLine = false)
+        SimpleInputField(value = prompt, onValueChange = { prompt = it }, placeholder = stringResource(R.string.prompt_hint), singleLine = false)
         
         Spacer(Modifier.height(16.dp))
         
@@ -463,12 +504,12 @@ fun PromptEditorScreen(viewModel: MainViewModel, navController: NavHostControlle
             Button(onClick = { 
                 viewModel.resetSystemPrompt() 
                 prompt = viewModel.getSystemPrompt()
-            }) { Text("Сброс", fontSize = 10.sp) }
+            }) { Text(stringResource(R.string.reset_btn), fontSize = 10.sp) }
             
             Button(onClick = { 
                 viewModel.setSystemPrompt(prompt)
                 navController.popBackStack()
-            }) { Text("Save", fontSize = 10.sp) }
+            }) { Text(stringResource(R.string.save_btn), fontSize = 10.sp) }
         }
         Spacer(Modifier.height(40.dp))
     }
@@ -480,7 +521,7 @@ fun ModelSelectionScreen(viewModel: MainViewModel, navController: NavHostControl
     val current = viewModel.getModel()
     
     ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
-        item { Text("Выберите модель", style = MaterialTheme.typography.titleSmall) }
+        item { Text(stringResource(R.string.select_model), style = MaterialTheme.typography.titleSmall) }
         items(models.size) { index ->
             val model = models[index]
             val isSelected = model == current
@@ -506,9 +547,9 @@ fun AboutScreen(navController: NavHostController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("AIMalb", style = MaterialTheme.typography.titleMedium)
-        Text("v1.2.6-beta (Build 66)", style = MaterialTheme.typography.bodySmall)
+        Text("v1.4.4-beta (Build 92)", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
-        Text("AI Assistant for Wear OS", textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.ai_assistant_desc), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
         Text(
             text = "github.com/Malboron/AIMalbWearOS", 
@@ -521,13 +562,10 @@ fun AboutScreen(navController: NavHostController) {
     }
 }
 
-/**
- * v1.2.5: Полноэкранный QR-код без кнопок.
- */
 @Composable
 fun QRCodeScreen() {
     val qrBitmap = remember { 
-        QRCodeHelper.generateQRCode("https://github.com/Malboron/AIMalbWearOS", 300) 
+        QRCodeHelper.generateQRCode("https://github.com/Malboron/AIMalbWearOS", 400) 
     }
     
     Box(
@@ -535,11 +573,11 @@ fun QRCodeScreen() {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("GitHub Repository", fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            Text(stringResource(R.string.github_repo), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
             Image(
                 bitmap = qrBitmap.asImageBitmap(), 
                 contentDescription = "QR Code",
-                modifier = Modifier.size(160.dp).background(Color.White).padding(8.dp)
+                modifier = Modifier.fillMaxSize(0.85f).background(Color.White).padding(8.dp)
             )
         }
     }
@@ -548,7 +586,9 @@ fun QRCodeScreen() {
 @Composable
 fun SimpleInputField(value: String, onValueChange: (String) -> Unit, placeholder: String, singleLine: Boolean = true) {
     Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Text(placeholder, style = TextStyle(fontSize = 10.sp, color = Color.Gray))
+        if (placeholder.isNotEmpty()) {
+            Text(placeholder, style = TextStyle(fontSize = 10.sp, color = Color.Gray))
+        }
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
