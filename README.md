@@ -12,17 +12,17 @@
 *   **Focus UI**: Текст ответа плавно прокручивается и центрируется по мере прочтения. Активная фраза всегда подсвечена.
 *   **Companion App**: Удобное приложение для смартфона для мгновенной синхронизации API-ключа и настроек с часами.
 *   **Виджет**: Запуск ассистента из виджета в боковом меню.
-
+*   **Голос**: Доступно 2 варианта зачитывания текста: локальный tts от google и сторонний tts microsoft edge с естественным звучанием, в котором так же можно выбирать конкретный голос из списка. Так же можно регулировать скорость зачитывания ответа.
 ---
 
 ## 🛠 Установка
 
 ### 1. Часы (Wear OS)
-1. Скачайте последний билд: [AIMalb1.5.0-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.5.0-beta/AIMalb1.5.0-beta-release.apk) 
+1. Скачайте последний билд: [AIMalb1.6.8-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.6.8-beta/AIMalb1.6.8-beta-release.apk) 
 2. Установите его через ADB или любой установщик APK для Wear OS.
 
 ### 2. Смартфон (Companion)
-1. Скачайте: [AIMalbCompanion1.1.1-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.5.0-beta/AIMalbCompanion1.1.1-beta-release.apk)
+1. Скачайте: [AIMalbCompanion1.1.1-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.6.8-beta/AIMalbCompanion1.1.1-beta-release.apk)
 2. Установите на телефон для удобного ввода настроек.
 
 ---
