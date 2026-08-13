@@ -18,11 +18,11 @@
 ## 🛠 Установка
 
 ### 1. Часы (Wear OS)
-1. Скачайте последний билд: [AIMalb1.4.4-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.4.4-beta/AIMalb1.4.4-beta-release.apk) 
+1. Скачайте последний билд: [AIMalb1.5.0-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.5.0-beta/AIMalb1.5.0-beta-release.apk) 
 2. Установите его через ADB или любой установщик APK для Wear OS.
 
 ### 2. Смартфон (Companion)
-1. Скачайте: [AIMalbCompanion1.1.1-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.4.4-beta/AIMalbCompanion1.1.1-beta-release.apk)
+1. Скачайте: [AIMalbCompanion1.1.1-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/v1.5.0-beta/AIMalbCompanion1.1.1-beta-release.apk)
 2. Установите на телефон для удобного ввода настроек.
 
 ---
@@ -35,7 +35,7 @@
 3. Вставьте ключ и нажмите **Sync to Watch**. Ключ мгновенно «прилетит» на ваши часы.
 
 ### Настройки на часах (Шестеренка)
-*   **Настройки ИИ**: Выбор модели и редактирование системного промпта.
+*   **Настройки ИИ**: Выбор модели и редактирование системного промпта. Список доступных моделей загружается через api Groq (не все модели работают с приложением, рекомендуется использовать модели от OpenAI).
 *   **Слушать при запуске**: Если включено, микрофон активируется сразу после открытия приложения.
 *   **Виджет**: В боковое меню можно добавить виджет для быстрого запуска приложения, при активной функции "слушать при запуске" можно сразу произносить запрос без дополнительных действий.
 
