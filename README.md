@@ -13,6 +13,7 @@
 *   **Companion App**: Удобное приложение для смартфона для мгновенной синхронизации API-ключа и настроек с часами.
 *   **Виджет**: Запуск ассистента из виджета в боковом меню.
 *   **Голос**: Доступно 2 варианта зачитывания текста: локальный tts от google и сторонний tts microsoft edge с естественным звучанием, в котором так же можно выбирать конкретный голос из списка. Так же можно регулировать скорость зачитывания ответа.
+
 ---
 
 ## 🛠 Установка
@@ -38,6 +39,22 @@
 *   **Настройки ИИ**: Выбор модели и редактирование системного промпта. Список доступных моделей загружается через api Groq (не все модели работают с приложением, рекомендуется использовать модели от OpenAI).
 *   **Слушать при запуске**: Если включено, микрофон активируется сразу после открытия приложения.
 *   **Виджет**: В боковое меню можно добавить виджет для быстрого запуска приложения, при активной функции "слушать при запуске" можно сразу произносить запрос без дополнительных действий.
+
+---
+
+## 📷 Скриншоты
+
+<img width="454" height="454" alt="Watch_Screenshot_1786604370082 png" src="https://github.com/user-attachments/assets/aefcb0ba-006f-4baa-bda7-0a2e0785163f" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604477474 png" src="https://github.com/user-attachments/assets/f2aaa819-18be-4806-98cd-be5c98dd3690" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604488233 png" src="https://github.com/user-attachments/assets/ca847e92-f881-4cbe-bef2-1330f7a54a04" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604387504 png" src="https://github.com/user-attachments/assets/97bf249d-6901-46d3-a353-a76441dac933" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604424787 png" src="https://github.com/user-attachments/assets/c3e77e32-ce52-47a2-9ea1-d6ee0fb0a544" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604435664 png" src="https://github.com/user-attachments/assets/08d2725d-c5a6-4c7f-a0c8-8693ee0f4516" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604455187 png" src="https://github.com/user-attachments/assets/03332b20-d0a7-4cf5-80cd-ce8ba6bbdd1a" />
+<img width="454" height="454" alt="Watch_Screenshot_1786604341769 png" src="https://github.com/user-attachments/assets/ada15cc9-1d55-4a1c-9b65-c14db48147a6" />
+<img width="1440" height="3088" alt="Screenshot_20260813_140633_AIMalb" src="https://github.com/user-attachments/assets/44e804b1-d19f-4611-a083-b65fff87c634" />
+<img width="1440" height="3088" alt="Screenshot_20260813_140703_AIMalb" src="https://github.com/user-attachments/assets/05347467-ffc0-4615-8571-006d76d9a73e" />
+
 
 ---
 
