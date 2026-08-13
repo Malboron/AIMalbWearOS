@@ -54,10 +54,13 @@ class TtsManager(
     /**
      * Зачитать весь текст одним потоком.
      */
-    fun speak(text: String) {
+    fun speak(text: String, speed: Float = 1.0f) {
         if (!isInitialized) return
         currentText = text
         isPaused = false
+        
+        tts.setSpeechRate(speed)
+        
         // QUEUE_FLUSH обрывает старое и мгновенно начинает новое
         tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "monolithic_utterance")
     }
@@ -72,6 +75,12 @@ class TtsManager(
             isPaused = false
             // К сожалению, системный TTS не умеет возобновлять с середины фразы.
             // При нажатии Плей мы перезапускаем монолит.
+            speak(currentText)
+        }
+    }
+
+    fun restart() {
+        if (currentText.isNotEmpty()) {
             speak(currentText)
         }
     }

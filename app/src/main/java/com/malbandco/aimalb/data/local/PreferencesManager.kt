@@ -24,6 +24,10 @@ class PreferencesManager(context: Context) {
 
     companion object {
         const val DEFAULT_MODEL = "openai/gpt-oss-120b"
+        const val DEFAULT_TTS_PROVIDER = "edge"
+        const val DEFAULT_EDGE_VOICE = "en-US-AvaMultilingualNeural"
+        const val DEFAULT_TTS_SPEED = 1.15f
+        
         val DEFAULT_PROMPT = """
             Ты — эксперт-ассистент AIMalb. Сегодня: %s.
             ТВОЯ ГЛАВНАЯ ЦЕЛЬ: Выдавать информацию максимально эффективно для экрана часов.
@@ -62,6 +66,18 @@ class PreferencesManager(context: Context) {
     var appLanguage: String
         get() = prefs.getString("app_language", "system") ?: "system"
         set(value) = prefs.edit().putString("app_language", value).apply()
+
+    var ttsProvider: String
+        get() = prefs.getString("tts_provider", DEFAULT_TTS_PROVIDER) ?: DEFAULT_TTS_PROVIDER
+        set(value) = prefs.edit().putString("tts_provider", value).apply()
+
+    var ttsSpeed: Float
+        get() = prefs.getFloat("tts_speed", DEFAULT_TTS_SPEED)
+        set(value) = prefs.edit().putFloat("tts_speed", value).apply()
+        
+    var edgeVoice: String
+        get() = prefs.getString("edge_voice", DEFAULT_EDGE_VOICE) ?: DEFAULT_EDGE_VOICE
+        set(value) = prefs.edit().putString("edge_voice", value).apply()
 
     /**
      * Возврат системного промпта к заводским настройкам.

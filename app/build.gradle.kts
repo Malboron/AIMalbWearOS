@@ -3,11 +3,9 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// v1.4.2: Strict versioned naming for all builds. 
-// Standard naming is removed to satisfy "no IDE fixes" requirement.
-// Фиксированное имя архива. 
+// v1.5.1: Фиксированное имя файла для всех релизных сборок
 base {
-    archivesName.set("AIMalb1.4.6-beta")
+    archivesName.set("AIMalb1.6.8-beta")
 }
 
 android {
@@ -18,13 +16,12 @@ android {
         applicationId = "com.malbandco.aimalb"
         minSdk = 30
         targetSdk = 36
-        versionCode = 95
-        versionName = "1.5.0-beta"
+        versionCode = 180
+        versionName = "1.6.8-beta"
     }
 
     signingConfigs {
         getByName("debug") {
-            // Use debug signing for all builds
         }
     }
 
@@ -74,7 +71,9 @@ dependencies {
     implementation(libs.wear.tiles)
     implementation(libs.wear.protolayout)
     implementation(libs.wear.protolayout.material)
-    implementation("androidx.concurrent:concurrent-futures:1.2.0")
+    implementation(libs.androidx.concurrent.futures)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.common)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.test.manifest)

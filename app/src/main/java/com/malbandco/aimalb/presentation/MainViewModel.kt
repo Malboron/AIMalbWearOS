@@ -79,7 +79,9 @@ class MainViewModel : ViewModel() {
     private var phraseOffsets: List<Int> = emptyList()
     
     private var ttsManager: TtsManager? = null
+    private var cloudTtsManager: CloudTtsManager? = null
     private var screenStayAwakeJob: Job? = null
+    private var estimatedSyncJob: Job? = null
     
     private var _repository: AiRepository? = null
     private val repository: AiRepository
@@ -96,6 +98,16 @@ class MainViewModel : ViewModel() {
     ))
     val availableModels: State<List<String>> = _availableModels
 
+    // v1.6.0: Список качественных мультиязычных голосов
+    val edgeVoices = listOf(
+        "en-US-AvaMultilingualNeural",
+        "en-US-AndrewMultilingualNeural",
+        "en-US-EmmaMultilingualNeural",
+        "en-US-BrianMultilingualNeural",
+        "de-DE-SeraphinaMultilingualNeural",
+        "fr-FR-RemyMultilingualNeural"
+    )
+
     fun init(context: Context) {
         if (preferencesManager == null) {
             preferencesManager = PreferencesManager(context)
@@ -105,21 +117,53 @@ class MainViewModel : ViewModel() {
             ttsManager = TtsManager(
                 context,
                 onCharacterReached = { charIndex ->
-                    viewModelScope.launch(Dispatchers.Main) {
-                        val segmentIndex = phraseOffsets.indexOfLast { it <= charIndex }
-                        if (segmentIndex >= 0 && segmentIndex != _currentIndex.intValue) {
-                            _currentIndex.intValue = segmentIndex
-                            _playbackState.value = PlaybackState.PLAYING
-                        }
-                        if (_appState.value == AppState.LOADING && segmentIndex >= 0) {
-                            _appState.value = AppState.RESPONDING
-                        }
-                    }
+                    syncTextToCharacter(charIndex)
                 },
                 onAllCompleted = {
                     viewModelScope.launch(Dispatchers.Main) {
+                        if (getTtsProvider() == "system") {
+                            _playbackState.value = PlaybackState.FINISHED
+                            startScreenTimeoutCountdown(10000)
+                        }
+                    }
+                }
+            )
+        }
+
+        if (cloudTtsManager == null) {
+            cloudTtsManager = CloudTtsManager(
+                context,
+                onStart = {
+                    viewModelScope.launch(Dispatchers.Main) {
+                        ttsManager?.stop()
+                        _playbackState.value = PlaybackState.PLAYING
+                        if (_appState.value == AppState.LOADING) {
+                            _appState.value = AppState.RESPONDING
+                            _currentIndex.intValue = 0
+                            _visiblePhrases.value = allPhrases
+                        }
+                        // v1.6.3: Запуск расчетной синхронизации при старте облачного голоса
+                        startEstimatedSync()
+                    }
+                },
+                onCompleted = {
+                    viewModelScope.launch(Dispatchers.Main) {
                         _playbackState.value = PlaybackState.FINISHED
                         startScreenTimeoutCountdown(10000)
+                        estimatedSyncJob?.cancel()
+                    }
+                },
+                onError = { error ->
+                    viewModelScope.launch(Dispatchers.Main) {
+                        Log.e("MainViewModel", "Cloud TTS Error: $error")
+                        if (_appState.value == AppState.LOADING) {
+                            _statusText.value = ""
+                            _appState.value = AppState.RESPONDING
+                            _currentIndex.intValue = 0
+                            _visiblePhrases.value = allPhrases
+                            _playbackState.value = PlaybackState.FINISHED
+                        }
+                        estimatedSyncJob?.cancel()
                     }
                 }
             )
@@ -155,8 +199,56 @@ class MainViewModel : ViewModel() {
                 searxngApi = searxngRetrofit.create(SearxngApi::class.java)
             )
             
-            // Загружаем список моделей при старте
             refreshModels()
+        }
+    }
+
+    /**
+     * v1.6.8: Оптимизированная расчетная синхронизация.
+     * Базовая скорость увеличена до 17.5 для исключения отставания.
+     */
+    private fun startEstimatedSync() {
+        estimatedSyncJob?.cancel()
+        estimatedSyncJob = viewModelScope.launch(Dispatchers.Main) {
+            // v1.6.8: Калибровка под реальную скорость Ava (17.5 симв/сек)
+            val baseCharsPerSecond = 17.5f
+            val startTime = System.currentTimeMillis()
+            var accumulatedTargetMs = 0L
+            
+            for (i in allPhrases.indices) {
+                _currentIndex.intValue = i
+                
+                val speed = getTtsSpeed()
+                val adjustedCharsPerMs = (baseCharsPerSecond * speed) / 1000.0f
+                
+                val phraseLength = allPhrases[i].length
+                val phraseDurationMs = (phraseLength / adjustedCharsPerMs).toLong()
+                
+                accumulatedTargetMs += phraseDurationMs
+                
+                val currentTime = System.currentTimeMillis()
+                val delayTime = (startTime + accumulatedTargetMs) - currentTime
+                
+                if (delayTime > 0) {
+                    delay(delayTime)
+                }
+                
+                if (_playbackState.value != PlaybackState.PLAYING) break
+            }
+        }
+    }
+
+    private fun syncTextToCharacter(charIndex: Int) {
+        viewModelScope.launch(Dispatchers.Main) {
+            if (phraseOffsets.isEmpty()) return@launch
+            val segmentIndex = phraseOffsets.indexOfLast { it <= charIndex }
+            if (segmentIndex >= 0 && segmentIndex != _currentIndex.intValue) {
+                _currentIndex.intValue = segmentIndex
+                if (_appState.value == AppState.LOADING) {
+                    _appState.value = AppState.RESPONDING
+                    _visiblePhrases.value = allPhrases
+                }
+            }
         }
     }
 
@@ -172,6 +264,15 @@ class MainViewModel : ViewModel() {
     fun getAppLanguage() = preferencesManager?.appLanguage ?: "system"
     fun setAppLanguage(value: String) { preferencesManager?.appLanguage = value }
 
+    fun getTtsProvider() = preferencesManager?.ttsProvider ?: PreferencesManager.DEFAULT_TTS_PROVIDER
+    fun setTtsProvider(value: String) { preferencesManager?.ttsProvider = value }
+    
+    fun getTtsSpeed() = preferencesManager?.ttsSpeed ?: PreferencesManager.DEFAULT_TTS_SPEED
+    fun setTtsSpeed(value: Float) { preferencesManager?.ttsSpeed = value }
+    
+    fun getEdgeVoice() = preferencesManager?.edgeVoice ?: PreferencesManager.DEFAULT_EDGE_VOICE
+    fun setEdgeVoice(value: String) { preferencesManager?.edgeVoice = value }
+
     fun refreshModels() {
         val key = getApiKey()
         if (key.isBlank()) return
@@ -180,7 +281,6 @@ class MainViewModel : ViewModel() {
             repository.getAvailableModels(key).onSuccess { models ->
                 if (models.isNotEmpty()) {
                     _availableModels.value = models
-                    // Если текущая модель больше не доступна, сбрасываем на первую из списка
                     val current = getModel()
                     if (current !in models) {
                         setModel(models.first())
@@ -200,9 +300,7 @@ class MainViewModel : ViewModel() {
     fun triggerVoiceManually() { _shouldTriggerVoice.value = true }
     
     fun triggerVoiceDirectly() {
-        ttsManager?.stop()
-        _currentIndex.intValue = -1
-        _playbackState.value = PlaybackState.FINISHED
+        reset()
         _shouldTriggerVoice.value = true
     }
 
@@ -219,7 +317,7 @@ class MainViewModel : ViewModel() {
             repository.verifyApiKey(key).fold(
                 onSuccess = { 
                     _verificationStatus.value = VerificationStatus.Success
-                    refreshModels() // Обновляем модели после успешной проверки ключа
+                    refreshModels()
                 },
                 onFailure = { _verificationStatus.value = VerificationStatus.Error("Fail") }
             )
@@ -259,7 +357,7 @@ class MainViewModel : ViewModel() {
     private fun startResponding(text: String) {
         stopScreenTimeoutCountdown()
         _isScreenLockActive.value = true
-        _statusText.value = "loading_voice"
+        
         val sanitizedText = text.replace("\\n", "\n").replace("/n", "\n")
         _responseText.value = sanitizedText
         val result = smartSplit(sanitizedText)
@@ -267,23 +365,44 @@ class MainViewModel : ViewModel() {
         phraseOffsets = result.second
         _visiblePhrases.value = allPhrases
         _currentIndex.intValue = 0
+
+        val provider = getTtsProvider()
+        val speed = getTtsSpeed()
         
-        // v1.4.5: Set PLAYING state immediately so the Pause button appears instantly
         _playbackState.value = PlaybackState.PLAYING
         
-        ttsManager?.speak(sanitizedText)
+        when (provider) {
+            "edge" -> {
+                _statusText.value = "preparing_voice"
+                ttsManager?.stop()
+                cloudTtsManager?.speakEdge(sanitizedText, getEdgeVoice(), speed)
+            }
+            else -> {
+                cloudTtsManager?.stop()
+                ttsManager?.speak(sanitizedText, speed)
+            }
+        }
     }
 
+    /**
+     * v1.6.8: Улучшенная разбивка текста с гарантированным захватом "хвоста".
+     */
     private fun smartSplit(text: String): Pair<List<String>, List<Int>> {
         val segments = mutableListOf<String>()
         val offsets = mutableListOf<Int>()
+        
+        // v1.6.8: Используем split с сохранением разделителей для точного маппинга
         val rawSentences = text.split(Regex("(?<=[.!?])\\s+|\\n")).filter { it.isNotBlank() }
+        
         var lastSearchIndex = 0
         for (sentence in rawSentences) {
             val sTrim = sentence.trim()
+            if (sTrim.isEmpty()) continue
+            
             val startIdx = text.indexOf(sTrim, lastSearchIndex)
             if (startIdx == -1) continue
             lastSearchIndex = startIdx + sTrim.length
+            
             if (sTrim.length <= 45) {
                 segments.add(sTrim)
                 offsets.add(startIdx)
@@ -296,6 +415,7 @@ class MainViewModel : ViewModel() {
                     if (currentChunk.length + wordToAppend.length > 45 && currentChunk.isNotEmpty()) {
                         segments.add(currentChunk.toString())
                         offsets.add(currentChunkOffset)
+                        
                         val nextWordIdx = text.indexOf(word, currentChunkOffset + 1)
                         currentChunk = StringBuilder(word)
                         currentChunkOffset = if (nextWordIdx != -1) nextWordIdx else currentChunkOffset
@@ -309,6 +429,13 @@ class MainViewModel : ViewModel() {
                 }
             }
         }
+        
+        // Гарантированная проверка на "хвост", если он был пропущен
+        if (segments.isEmpty() && text.isNotBlank()) {
+            segments.add(text.trim())
+            offsets.add(0)
+        }
+        
         return Pair(segments, offsets)
     }
 
@@ -326,29 +453,50 @@ class MainViewModel : ViewModel() {
     }
 
     fun togglePauseResume() {
+        val provider = getTtsProvider()
+        val speed = getTtsSpeed()
         when (_playbackState.value) {
             PlaybackState.PLAYING -> {
-                ttsManager?.pause()
+                estimatedSyncJob?.cancel()
+                if (provider == "system") ttsManager?.pause() 
+                else cloudTtsManager?.stop() 
+                
                 _playbackState.value = PlaybackState.PAUSED
                 startScreenTimeoutCountdown(15000)
             }
             PlaybackState.PAUSED -> {
                 stopScreenTimeoutCountdown()
                 _isScreenLockActive.value = true
-                ttsManager?.resume()
+                
+                if (provider == "system") ttsManager?.resume() 
+                else {
+                    // При возобновлении облака пересоздаем поток
+                    startResponding(_responseText.value)
+                }
+                
                 _playbackState.value = PlaybackState.PLAYING
             }
             PlaybackState.FINISHED -> {
+                // v1.6.8: Оптимизированный повтор БЕЗ скачивания
                 stopScreenTimeoutCountdown()
                 _isScreenLockActive.value = true
-                ttsManager?.speak(_responseText.value)
+                _playbackState.value = PlaybackState.PLAYING
+                _currentIndex.intValue = 0
+                
+                if (provider == "edge") {
+                    cloudTtsManager?.restart()
+                } else {
+                    ttsManager?.restart()
+                }
             }
         }
     }
 
     fun reset() {
         stopScreenTimeoutCountdown()
+        estimatedSyncJob?.cancel()
         ttsManager?.stop()
+        cloudTtsManager?.stop()
         _appState.value = AppState.IDLE
         _responseText.value = ""
         _statusText.value = ""
@@ -360,6 +508,8 @@ class MainViewModel : ViewModel() {
 
     override fun onCleared() {
         super.onCleared()
+        estimatedSyncJob?.cancel()
         ttsManager?.release()
+        cloudTtsManager?.release()
     }
 }

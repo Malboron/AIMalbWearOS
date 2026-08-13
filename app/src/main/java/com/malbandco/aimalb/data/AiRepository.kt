@@ -106,14 +106,25 @@ class AiRepository(
     }
 
     /**
-     * Запрос списка доступных моделей.
+     * Запрос списка доступных моделей с фильтрацией.
      */
     suspend fun getAvailableModels(apiKey: String): Result<List<String>> = withContext(Dispatchers.IO) {
         val authHeader = if (apiKey.startsWith("Bearer ")) apiKey else "Bearer $apiKey"
         try {
             val response = groqApi.getModels(authHeader)
-            // Фильтруем только активные модели
-            val models = response.data.filter { it.active }.map { it.id }.sorted()
+            // Логический фильтр: исключаем vision, whisper, embed, guard, llava
+            val models = response.data
+                .filter { it.active }
+                .map { it.id }
+                .filter { id ->
+                    val lowerId = id.lowercase()
+                    !lowerId.contains("vision") &&
+                    !lowerId.contains("whisper") &&
+                    !lowerId.contains("embed") &&
+                    !lowerId.contains("guard") &&
+                    !lowerId.contains("llava")
+                }
+                .sorted()
             Result.success(models)
         } catch (e: Exception) {
             Log.e("AiRepository", "Failed to fetch models", e)

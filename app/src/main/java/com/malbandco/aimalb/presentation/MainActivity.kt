@@ -78,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        setIntent(intent) // Обновляем интент для корректной обработки сигнала "trigger_voice"
+        setIntent(intent) 
         handleIntent(intent)
     }
 
@@ -104,15 +104,14 @@ object Routes {
     const val RESPONDING = "responding"
     const val SETTINGS_MENU = "settings_menu"
     const val AI_SETTINGS = "ai_settings"
+    const val VOICE_SETTINGS = "voice_settings"
+    const val VOICE_SELECTION = "voice_selection"
     const val MODEL_SELECTION = "model_selection"
     const val PROMPT_EDITOR = "prompt_editor"
     const val ABOUT = "about"
     const val QR_CODE = "qr_code"
 }
 
-/**
- * Корневой Composable. Управляет навигацией и системными флагами.
- */
 @Composable
 fun WearApp(viewModel: MainViewModel = viewModel()) {
     val context = LocalContext.current
@@ -154,7 +153,6 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
 
     LaunchedEffect(Unit) {
         viewModel.init(context)
-        // v1.3.6: Проверка интента при каждом старте/возобновлении из LaunchedEffect
         (context as? ComponentActivity)?.intent?.let { intent ->
             if (intent.getBooleanExtra("trigger_voice", false)) {
                 viewModel.triggerVoiceManually()
@@ -199,6 +197,8 @@ fun WearApp(viewModel: MainViewModel = viewModel()) {
                 composable(Routes.RESPONDING) { RespondingScreen(viewModel) }
                 composable(Routes.SETTINGS_MENU) { SettingsMenuScreen(navController) }
                 composable(Routes.AI_SETTINGS) { AiSettingsScreen(viewModel, navController) }
+                composable(Routes.VOICE_SETTINGS) { VoiceSettingsScreen(viewModel, navController) }
+                composable(Routes.VOICE_SELECTION) { VoiceSelectionScreen(viewModel, navController) }
                 composable(Routes.MODEL_SELECTION) { ModelSelectionScreen(viewModel, navController) }
                 composable(Routes.PROMPT_EDITOR) { PromptEditorScreen(viewModel, navController) }
                 composable(Routes.ABOUT) { AboutScreen(navController) }
@@ -242,7 +242,7 @@ fun HomeScreen(
             onClick = { navController.navigate(Routes.SETTINGS_MENU) },
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp)
         ) {
-            Icon(Icons.Default.Settings, contentDescription = "Настройки", modifier = Modifier.size(24.dp))
+            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings), modifier = Modifier.size(24.dp))
         }
     }
 }
@@ -364,12 +364,20 @@ fun SettingsMenuScreen(navController: NavHostController) {
     ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
         item { Text(stringResource(R.string.settings), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp)) }
         item {
-            TitleCard(onClick = { navController.navigate(Routes.AI_SETTINGS) }, title = { Text(stringResource(R.string.ai_settings)) }) {
+            TitleCard(onClick = { navController.navigate(Routes.AI_SETTINGS) }, 
+                title = { Text(stringResource(R.string.ai_settings)) }) {
                 Text(stringResource(R.string.config_summary), style = MaterialTheme.typography.bodySmall)
             }
         }
         item {
-            TitleCard(onClick = { navController.navigate(Routes.ABOUT) }, title = { Text(stringResource(R.string.about)) }) {
+            TitleCard(onClick = { navController.navigate(Routes.VOICE_SETTINGS) }, 
+                title = { Text(stringResource(R.string.voice_settings)) }) {
+                Text(stringResource(R.string.voice_summary), style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        item {
+            TitleCard(onClick = { navController.navigate(Routes.ABOUT) }, 
+                title = { Text(stringResource(R.string.about)) }) {
                 Text(stringResource(R.string.about_summary), style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -461,7 +469,6 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
                     val newLang = langOptions[nextIndex]
                     viewModel.setAppLanguage(newLang)
                     lang = newLang
-                    // Restart activity to apply language immediately
                     (context as? ComponentActivity)?.recreate()
                 },
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -472,11 +479,97 @@ fun AiSettingsScreen(viewModel: MainViewModel, navController: NavHostController)
         }
         
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                Button(onClick = { 
-                    viewModel.setApiKey(key)
+            Button(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ok_btn), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun VoiceSettingsScreen(viewModel: MainViewModel, navController: NavHostController) {
+    ScalingLazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(top = 32.dp, bottom = 48.dp, start = 8.dp, end = 8.dp)
+    ) {
+        item { Text(stringResource(R.string.voice_settings), style = MaterialTheme.typography.titleSmall) }
+        
+        item {
+            var provider by remember { mutableStateOf(viewModel.getTtsProvider()) }
+            val providers = listOf("system", "edge")
+            val names = listOf("System", "MS Edge")
+            Button(
+                onClick = {
+                    val next = providers[(providers.indexOf(provider) + 1) % providers.size]
+                    viewModel.setTtsProvider(next)
+                    provider = next
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Text("${stringResource(R.string.voice_engine)}: ${names[providers.indexOf(provider)]}", fontSize = 12.sp)
+            }
+        }
+
+        item {
+            var speed by remember { mutableStateOf(viewModel.getTtsSpeed()) }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                IconButton(onClick = {
+                    speed = (speed - 0.05f).coerceAtLeast(0.5f)
+                    viewModel.setTtsSpeed(speed)
+                }) { Icon(Icons.Default.Remove, contentDescription = "Slower") }
+                
+                Text(stringResource(R.string.speech_speed, speed), fontSize = 12.sp)
+                
+                IconButton(onClick = {
+                    speed = (speed + 0.05f).coerceAtMost(2.0f)
+                    viewModel.setTtsSpeed(speed)
+                }) { Icon(Icons.Default.Add, contentDescription = "Faster") }
+            }
+        }
+
+        if (viewModel.getTtsProvider() == "edge") {
+            item {
+                Button(
+                    onClick = { navController.navigate(Routes.VOICE_SELECTION) },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors()
+                ) {
+                    Text("${stringResource(R.string.select_voice)}: ${viewModel.getEdgeVoice().split("-").getOrNull(2) ?: "Ava"}", fontSize = 12.sp)
+                }
+            }
+        }
+
+        item {
+            Button(onClick = { navController.popBackStack() }, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.ok_btn), fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
+fun VoiceSelectionScreen(viewModel: MainViewModel, navController: NavHostController) {
+    val voices = viewModel.edgeVoices
+    val current = viewModel.getEdgeVoice()
+    ScalingLazyColumn(modifier = Modifier.fillMaxSize()) {
+        item { Text(stringResource(R.string.select_voice), style = MaterialTheme.typography.titleSmall) }
+        items(voices.size) { index ->
+            val voice = voices[index]
+            val isSelected = voice == current
+            val shortName = voice.split("-").getOrNull(2)?.replace("MultilingualNeural", "") ?: voice
+            Button(
+                onClick = {
+                    viewModel.setEdgeVoice(voice)
                     navController.popBackStack()
-                }) { Text(stringResource(R.string.ok_btn), fontSize = 12.sp) }
+                },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                colors = if (isSelected) ButtonDefaults.buttonColors() else ButtonDefaults.filledTonalButtonColors()
+            ) {
+                Text(shortName, fontSize = 12.sp)
             }
         }
     }
@@ -547,7 +640,7 @@ fun AboutScreen(navController: NavHostController) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("AIMalb", style = MaterialTheme.typography.titleMedium)
-        Text("v1.5.0-beta (Build 95)", style = MaterialTheme.typography.bodySmall)
+        Text("v1.6.8-beta (Build 180)", style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.ai_assistant_desc), textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(12.dp))
@@ -607,7 +700,7 @@ fun SimpleInputField(value: String, onValueChange: (String) -> Unit, placeholder
 fun MicButton(onClick: () -> Unit, size: androidx.compose.ui.unit.Dp, icon: ImageVector) {
     Button(onClick = onClick, modifier = Modifier.size(size), contentPadding = PaddingValues(0.dp)) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(imageVector = icon, contentDescription = "Микрофон", modifier = Modifier.size(size * 0.55f))
+            Icon(imageVector = icon, contentDescription = stringResource(R.string.app_name), modifier = Modifier.size(size * 0.55f))
         }
     }
 }

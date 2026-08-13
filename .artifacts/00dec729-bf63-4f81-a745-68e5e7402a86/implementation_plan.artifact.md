@@ -1,39 +1,35 @@
-# Implementation Plan - Dynamic AI Model List (v1.5.0)
+# Implementation Plan - Scrolling Baseline & Replay Optimization (v1.6.8)
 
-This plan implements dynamic fetching of available AI models from the Groq API, replacing the hardcoded list in the application.
-
-## User Review Required
-
-> [!IMPORTANT]
-> **API Key Requirement**: The list of models will only be fetched after a valid API key is provided. The app will attempt to refresh the list on initialization and when the API key is verified.
+This plan fixes the text-audio lag by increasing the character baseline, ensures the last line is never missed by refining the splitter, and optimizes the "Replay" feature to work locally.
 
 ## Proposed Changes
 
-### 1. Data Layer: API Definition
-
-#### [MODIFY] [GroqApi.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/remote/GroqApi.kt)
-- Define `GroqModelsResponse` and `GroqModel` data classes.
-- Update `getModels` to return `GroqModelsResponse` instead of `ResponseBody`.
-
-#### [MODIFY] [AiRepository.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/data/AiRepository.kt)
-- Add `getAvailableModels(apiKey: String): Result<List<String>>` method to fetch and parse the model IDs.
-
-### 2. Presentation Layer: ViewModel Integration
+### 1. Watch App: Precision Scrolling & Splitting
 
 #### [MODIFY] [MainViewModel.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainViewModel.kt)
-- Change `availableModels` from a hardcoded `List<String>` to a `State<List<String>>`.
-- Add `refreshModels()` method to call the repository.
-- Call `refreshModels()` during `init()` and after successful API key verification.
-- Ensure the current selected model is preserved if it's still available in the new list, otherwise fallback to a default.
+- **Tempo Calibration**: Increase `baseCharsPerSecond` from 14.5f to **17.5f**.
+    - **Reason**: 14.5 was proven too slow for modern neural voices, causing the text to lag behind the audio. 17.5 matches the actual "speech-to-character" density of the Ava voice.
+- **Splitter Tail Fix**: Refactor `smartSplit()` to ensure any remaining text after the last delimiter is explicitly added as the final segment. This fixes the "spoken but not shown" bug.
+- **Speed Multiplier**: Re-verify that `getTtsSpeed()` is strictly factored into the absolute time calculation.
 
-### 3. Build & Versioning
-- Increment version to **`v1.5.0-beta`** (Build **`95`**).
-- Maintain release naming convention.
+### 2. Watch App: Instant Local Replay
+
+#### [MODIFY] [MainViewModel.kt](file:///C:/Users/kazakov_ai/AndroidStudioProjects/AIMalb/app/src/main/java/com/malbandco/aimalb/presentation/MainViewModel.kt)
+- **Toggle Optimization**: In `togglePauseResume()`, when state is `FINISHED`:
+    - Do NOT call `startResponding()` (which re-downloads the file).
+    - Call `cloudTtsManager?.restart()` or `ttsManager?.restart()`.
+    - Manually trigger `startEstimatedSync()` to restore scrolling for the cached audio.
+
+### 3. Build & Versioning (Build 180)
+- Update app version to **`v1.6.8-beta`** (Build **`180`**).
+- Maintain strict naming: **`AIMalb1.6.8-beta-release.apk`**.
+
+## User Review Required
+
+> [!TIP]
+> **Performance**: By using the local cache for replays, we save approx. 2-3 seconds of loading time and reduce API costs/network usage. The "Last line" fix ensures the text list is a 100% faithful representation of the audio content.
 
 ## Verification Plan
-
-### Manual Verification
-1.  **Initialization**: Open the app with an existing API key. Verify that the model list in settings is populated dynamically.
-2.  **Key Verification**: Enter a new API key and tap "Verify." Confirm the model list updates upon success.
-3.  **Model Selection**: Change the model from the dynamic list and verify it is saved and used for subsequent chat requests.
-4.  **Error Handling**: Verify that if the API request fails (e.g., no internet), the app falls back to a safe default list or shows an informative message.
+1.  **Last Line Test**: Ask for a short sentence without a dot (e.g., "Tell me one word"). Verify it appears in the list.
+2.  **Sync Test (1.15x)**: Verify the text no longer drifts and stays aligned with the voice.
+3.  **Replay Test**: Click Replay. Verify the audio starts **instantly** without the "Preparing voice..." loading state.
