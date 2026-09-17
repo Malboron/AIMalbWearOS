@@ -1,3 +1,6 @@
+https://github.com/Malboron/AIMalbWearOS/blob/master/README.md
+[English version](https://github.com/Malboron/AIMalbWearOS/blob/master/README.md)
+
 # AIMalb - Голосовой ИИ для Wear OS
 
 **AIMalb** - Голосовой ИИ для смарт-часов на Wear OS. Он позволяет прямо с часов задавать вопросы, получать ответы от современных ИИ и запрашивать актуальную информацию из интернета.
