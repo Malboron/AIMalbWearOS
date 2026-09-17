@@ -1,4 +1,4 @@
-[🇷🇺 Русская версия](README.ru.md)
+[🇷🇺 Русская версия]([readme.ru.md](https://github.com/Malboron/AIMalbWearOS/blob/master/readme.ru.md))
 
 # AIMalb - Voice AI for Wear OS
 
