@@ -1,89 +1,64 @@
-# AIMalb - Голосовой ИИ для Wear OS
+[🇷🇺 Русская версия](README.ru.md)
 
-**AIMalb** - Голосовой ИИ для смарт-часов на Wear OS. Он позволяет прямо с часов задавать вопросы, получать ответы от современных ИИ и запрашивать актуальную информацию из интернета.
+# AIMalb - Voice AI for Wear OS
 
-Приложение расчитано на быстрые повседневные запросы, когда доставать телефон неудобно или просто не хочется: можно задать вопрос голосом, получить ответ и прослушать его прямо на часах.
----
+AIMalb is a voice AI for Wear OS smartwatches. It allows you to ask questions directly from your watch, get answers from modern AI models, and retrieve up-to-date information from the Internet.
 
-## 🌊 Дисклеймер: Чистый вайб-кодинг
+## The app is designed for quick everyday requests
 
-Этот проект — продукт чистого **вайб-кодинга**. Он пишется исключительно в свободное время, под настроение и когда на это есть силы.
+When taking out your phone is inconvenient or you simply don't want to: ask a question by voice, get an answer, and listen to it directly on your watch.
 
-Поэтому сразу снижу ожидания:
-* Я не профессионал, который строит здесь идеальную enterprise-архитектуру.
-* Код пишется так, как пишется в моменте, без душных правил и гайдлайнов.
-* Что-то может сломаться, а фиксы и новые фичи выходят только тогда, когда возвращается вдохновение.
+## 🚀 Main Features
 
-Это хобби ради удовольствия, проект отдается «как есть». Если вам близок такой подход — добро пожаловать!
-
----
-## 🚀 Основные возможности
-
-*   **Флагманский интеллект**: Поддержка моделей `gpt-oss-120b`, `llama-3.3-70b` и других через Groq LPU.
-*   **Доступ в интернет**: Автоматический поиск через DuckDuckGo Lite для получения актуальных курсов валют, погоды и новостей.
-*   **Прямые данные**: Мгновенное получение официальных курсов ЦБ РФ без галлюцинаций ИИ.
-*   **Focus UI**: Текст ответа плавно прокручивается и центрируется по мере прочтения. Активная фраза всегда подсвечена.
-*   **Companion App**: Удобное приложение для смартфона для мгновенной синхронизации API-ключа и настроек с часами.
-*   **Виджет**: Запуск приложения из виджета в боковом меню.
-*   **Голос**: Доступно 2 варианта зачитывания текста: локальный tts от google и сторонний tts microsoft edge с естественным звучанием, в котором так же можно выбирать конкретный голос из списка. Так же можно регулировать скорость зачитывания ответа.
+* **AI models:** Support for `gpt-oss-120b`, `llama-3.3-70b`, and other models through the Groq API.
+* **Internet access:** Automatic search through DuckDuckGo Lite for up-to-date exchange rates, weather, news, and other information.
+* **Direct data:** Instant access to official Central Bank of Russia exchange rates without relying on AI-generated answers.
+* **Focus UI:** The answer text scrolls and centers as it is being read. The currently spoken phrase is highlighted.
+* **Companion App:** A smartphone companion app for quickly synchronizing the API key and settings with the watch.
+* **Widget:** Launch the app directly from a widget in the side menu.
+* **Voice:** Two text-to-speech options are available: Google's local TTS and Microsoft Edge TTS with more natural-sounding voices. Edge TTS also allows you to select a specific voice and adjust the speech rate.
 
 ---
 
-## 🛠 Установка
+## 🛠 Installation
 
-### 1. Часы (Wear OS)
-1. Скачайте последний билд: [AIMalb1.6.8-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/1.6.8-beta/AIMalb1.6.8-beta-release.apk) 
-2. Установите его через ADB или любой установщик APK для Wear OS.
+### 1. Watch (Wear OS)
 
-### 2. Смартфон (Companion)
-1. Скачайте: [AIMalbCompanion1.1.1-beta-release.apk](https://github.com/Malboron/AIMalbWearOS/releases/download/1.6.8-beta/AIMalbCompanion1.1.1-beta-release.apk)
-2. Установите на телефон для удобного ввода настроек.
+1. Download the latest build: `AIMalb1.6.8-beta-release.apk`
+2. Install it using ADB or any APK installer for Wear OS.
 
----
+### 2. Smartphone (Companion)
 
-## ⚙️ Настройка и Использование
-
-### Первый запуск
-1. Получите бесплатный API ключ на [console.groq.com](https://console.groq.com/).
-2. Откройте **AIMalb Companion** на телефоне.
-3. Вставьте ключ и нажмите **Sync to Watch**. Ключ мгновенно «прилетит» на ваши часы.
-
-### Настройки на часах (Шестеренка)
-*   **Настройки ИИ**: Выбор модели и редактирование системного промпта. Список доступных моделей загружается через api Groq (не все модели работают с приложением, рекомендуется использовать модели от OpenAI).
-*   **Слушать при запуске**: Если включено, микрофон активируется сразу после открытия приложения.
-*   **Виджет**: В боковое меню можно добавить виджет для быстрого запуска приложения, при активной функции "слушать при запуске" можно сразу произносить запрос без дополнительных действий.
+1. Download `AIMalbCompanion1.1.1-beta-release.apk`
+2. Install it on your phone to conveniently configure the app.
 
 ---
 
-## 📷 Скриншоты
+## ⚙️ Setup and Usage
+
+### First Launch
+
+1. Get a free API key from [Groq](https://console.groq.com/keys).
+2. Open AIMalb Companion on your phone.
+3. Paste the key and tap **Sync to Watch**. The key will be transferred to your watch immediately.
+
+### Watch Settings
+
+* **AI Settings:** Select the model and edit the system prompt. The list of available models is loaded through the Groq API. Not all models are compatible with the app.
+* **Listen on Launch:** When enabled, the microphone activates immediately after opening the app.
+* **Widget:** Add the widget to the side menu for quick access. When **Listen on Launch** is enabled, you can start speaking your request immediately.
+
+---
+
+## 📷 Screenshots
 
 ### ⌚ Wear OS
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/aefcb0ba-006f-4baa-bda7-0a2e0785163f" width="220">
-  <img src="https://github.com/user-attachments/assets/f2aaa819-18be-4806-98cd-be5c98dd3690" width="220">
-  <img src="https://github.com/user-attachments/assets/ca847e92-f881-4cbe-bef2-1330f7a54a04" width="220">
-</p>
+### 📱 Companion App
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/97bf249d-6901-46d3-a353-a76441dac933" width="220">
-  <img src="https://github.com/user-attachments/assets/c3e77e32-ce52-47a2-9ea1-d6ee0fb0a544" width="220">
-  <img src="https://github.com/user-attachments/assets/08d2725d-c5a6-4c7f-a0c8-8693ee0f4516" width="220">
-</p>
+---
 
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/03332b20-d0a7-4cf5-80cd-ce8ba6bbdd1a" width="220">
-  <img src="https://github.com/user-attachments/assets/ada15cc9-1d55-4a1c-9b65-c14db48147a6" width="220">
-</p>
-
-### 📱 Приложение
-
-<p align="center">
-  <img src="https://github.com/user-attachments/assets/44e804b1-d19f-4611-a083-b65fff87c634" width="300">
-  <img src="https://github.com/user-attachments/assets/05347467-ffc0-4615-8571-006d76d9a73e" width="300">
-</p>
-
-## Технологии
+## Technologies
 
 * Kotlin
 * Jetpack Compose
@@ -93,65 +68,61 @@
 * Kotlin Coroutines
 * Groq API
 
-## Архитектура
+## Architecture
 
-Проект состоит из двух приложений:
+The project consists of two applications:
 
-* [AIMalb] — основное приложение для часов
-* [AIMalbCompanion]— приложение-компаньон для смартфона
+* **AIMalb** — the main app for the watch
+* **AIMalbCompanion** — the companion app for the smartphone
 
-Связь между устройствами выполняется через Wear OS Data Layer.
+Communication between the devices is handled through the Wear OS Data Layer.
 
-## Статус проекта
+## Project Status
 
-В разработке (по мере сил и возможностей).
+**In development** — updated as time and resources allow.
 
-## Дорожная карта
+## Roadmap
 
-Запоминание контекста внутри одного приложения.
+* Context retention within a single session.
+* Chat history.
+* Improved text and voice synchronization.
+* Automatically start processing the request after voice input ends, without requiring separate **Finish** and **Send** buttons.
+* Run a local AI model on the smartphone through the companion app and interact with it from the watch for fully autonomous operation.
 
-История чатов.
+## System Requirements and Testing
 
-Улучшение синхронизации текста и голоса.
+The app is designed for devices running **Wear OS 3.5 and later**.
 
-Автоматическое начало обработки запроса после завершения голосового ввода без необходимости нажимать кнопки "завершить" и "отправить".
+Currently tested only on **Mobvoi TicWatch Pro 3 GPS**.
 
-Запуск локального ИИ на устройстве с приложение компаньоном и взаимодействие с ним через приложение на часах в обычном режиме, для полной автономности.
+## Why I Made This
 
-## Системные требования и тестирование
+The idea for the app came from the fact that Google removed the ability to launch its built-in voice assistant on older devices. I simply wanted a way to ask a modern AI something directly from my watch.
 
-Приложение разработано с прицелом на работу с устройствами на android WearOS 3.5 и выше.
+## Known Issues
 
-Тестировалось приложение только на часах Mobvoi TicWatch Pro 3 GPS.
+Text and speech synchronization is not perfect. The transition to the next line is currently based approximately on the length of the corresponding audio. This issue appeared after adding Microsoft Edge TTS, since it generates a complete audio file rather than streaming the speech in real time.
 
-## В чём задумка и смысл приложения
+Memory and conversation context are not implemented yet, so the bot cannot handle follow-up questions based on previous messages.
 
-Идея разработки приложения зародилась из-за того что Google исключила возможность запуска фирменного голосового ассистента на устаревших устройства и хотелось просто иметь возможность спросить что-то у какого-нибудь современного ИИ прямо с часов.
+On some devices, possibly slower ones, the watch may go to sleep while launching the app if the screen timeout is set too short.
 
-## Известные проблемы
+## AI-Assisted Development
 
-Синхронизация зачитывания и вывода текста работает не иделально так как переключение на следующую строку происходит примерно исходя из длины аудио, проблема возникла после внедрения tts microsoft edge, так как это уже не озвучивание на лету а цельный аудиофайл.
+AI tools were used throughout the development of the project for coding, code analysis, and finding solutions.
 
-На данный момент не реализованна функция памяти и контекста, поэтому бот не может ответить на уточнающий вопрос.
+The main AI tool used during development:
 
-Иногда, возможно только на медленных устройствах, часы могут уснуть во время запуска приложения, если установлен слишком короткий таймер засыпания.
+* **Google Gemini** — assistance with code generation and analysis, architectural decisions, and debugging.
 
-## Использование ИИ
+AI was used extensively throughout the development process, while the final decisions, component integration, and code verification were handled as part of the development process.
 
-При создании проекта использовались инструменты искусственного интеллекта для помощи в разработке, анализе кода и поиске решений.
+## License
 
-Основной AI-инструмент, использованный в процессе разработки:
+The project is distributed under the [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) license.
 
-* Google Gemini — помощь с генерацией и анализом кода, архитектурными решениями и отладкой.
+## Support the Project
 
-ИИ использовался как вспомогательный инструмент. Все решения, интеграция компонентов и финальная проверка кода выполнялись в процессе разработки проекта.
+If you find the project useful, you can support its development:
 
-## Лицензия
-
-Проект распространяется под лицензией [Apache 2.0](LICENSE).
-
-## Поддержать проект
-
-Если проект оказался полезным, вы можете поддержать его развитие:
-
-[💙 Поддержать на ЮMoney](https://yoomoney.ru/to/4100119587032789/0)
+💙 [Support via YooMoney](https://yoomoney.ru/)
